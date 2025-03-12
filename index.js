@@ -1,53 +1,24 @@
-const axios = require("axios");
-const express = require("express");
-const cheerio = require("cheerio");
+import express from "express";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import helmet from "helmet";
+import { dbConnect } from "./src/config/db.js";
+import router from "./src/router/authRoutes.js";
+import "./src/config/passport.js";
+import passport from "passport";
+import authRoute from "./src/router/authRoutes.js";
+const PORT = process.env.PORT || 5000;
 const app = express();
-const cors = require("cors");
-const PORT = 4501;
 
+app.use(helmet());
 app.use(cors());
-
-app.get("/fetchMetaData", async (req, res) => {
-  const { url } = req.query;
-  
-
-  if (!url) {
-    return res.status(400).send({ error: "A URL is required" });
-  }
-
-  axios
-    .get(url)
-    .then((response) => {
-      const $ = cheerio.load(response.data);
-      console.log(response);
-      const title = $("head title").text();
-      const description = $('meta[name="description"]').attr("content");
-      const image = $('meta[property="og:image"]').attr("content");
-      res.json({
-        title,
-        description,
-        image,
-      });
-    })
-    .catch((error) => {
-      res.status(500).send({ error: "failed to fetch URL" });
-    });
-  // try {
-  //   const { data } = await axios.get(url);
-  //   const $ = cheerio.load(data);
-  //   const title = $("head title").text();
-  //   const description = $('meta[name="description"]').attr("content");
-  //   const image = $('meta[property="og:image"]').attr("content");
-  //   res.json({
-  //     title,
-  //     description,
-  //     image,
-  //   });
-  // } catch (err) {
-  //   res.status(500).send({ error: "failed to fetch URL" });
-  // }
-});
-
+app.use(cookieParser());
+app.use(express.json());
+app.use(passport.initialize());
+app.use("/auth", authRoute);
+//connst to monngodb
+await dbConnect();
+//starting server
 app.listen(PORT, () => {
-  console.log(`Browser running on port ${PORT} `);
+  console.log("Server has started");
 });
