@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const jwtVerfication = (req, res, next) => {
+const jwtVerification = (req, res, next) => {
   const token = req.cookies.token;
   if (!token)
     return res.status(400).json({
@@ -12,11 +12,11 @@ const jwtVerfication = (req, res, next) => {
     if (err) {
       return res
         .status(201)
-        .json({ success: false, message: "verification failed" });
+        .json({ success: false, message: "Token has expired" });
     }
     req.user = decoded;
     next();
   });
 };
 
-export default jwtVerfication;
+export default jwtVerification;
