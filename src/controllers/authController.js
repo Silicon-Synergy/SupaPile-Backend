@@ -16,10 +16,11 @@ export const googleSignInCallback = (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: "5h" }
   );
-  res.cookie("Authorization", token, {
+  res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Secure cookies in production
     sameSite: "strict", // Prevents CSRF attacks
   });
+  console.log(token);
   res.redirect("http://localhost:3000/");
 };
