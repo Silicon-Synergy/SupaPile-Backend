@@ -1,4 +1,5 @@
 import express from "express";
+import dotenv from "dotenv";
 import expressRateLimiter from "express-rate-limiter";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -18,7 +19,8 @@ const limiter = expressRateLimiter({
   header: true,
 });
 
-app.use(limiter)
+dotenv.config();
+app.use(limiter);
 app.use(helmet());
 app.use(cors());
 app.use(cookieParser());
