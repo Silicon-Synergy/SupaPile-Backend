@@ -43,11 +43,19 @@ export const postLink = async (req, res) => {
 
 export const readLink = async (req, res) => {
   let userId = req.user.id;
-  //the endpoint needs to accept a last id if it not proivded only give me the first 10
+  let {lastId} = req.query;
+  let limit = 48;
+  //the endpoint needs to accept a last id if it not proivded only give me the first id
   console.log(userId);
   try {
-    const links = await Links.find({ userId: userId, isDeleted: false })
+    const links = await Links.find({
+      userId: userId,
+      isDeleted: false,
+      ...(lastId && { _id: { $gt: lastId } }),
+    })
       .select(["userId", "title", "description", "_id"])
+      .sort({ _id: 1 })
+      .limit(limit)
       .lean();
     // lean is used to optimize the mongodb return since i
     // am not performing any extra action on the object

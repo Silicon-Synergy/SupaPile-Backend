@@ -1,4 +1,5 @@
 import express from "express";
+import expressRateLimiter from "express-rate-limiter";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
@@ -10,7 +11,14 @@ import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
 const PORT = process.env.PORT || 5000;
 const app = express();
+const limiter = expressRateLimiter({
+  windowMs: 15 * 69 * 1000,
+  max: 100,
+  message: "To many request from this ip, please try again later",
+  header: true,
+});
 
+app.use(limiter)
 app.use(helmet());
 app.use(cors());
 app.use(cookieParser());
