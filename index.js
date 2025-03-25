@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
-import expressRateLimiter from "express-rate-limiter";
+dotenv.config();
+import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
@@ -10,16 +11,16 @@ import "./src/config/passport.js";
 import passport from "passport";
 import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
+
 const PORT = process.env.PORT || 5000;
 const app = express();
-const limiter = expressRateLimiter({
+const limiter = rateLimit({
   windowMs: 15 * 69 * 1000,
   max: 100,
   message: "To many request from this ip, please try again later",
   header: true,
 });
 
-dotenv.config();
 app.use(limiter);
 app.use(helmet());
 app.use(cors());
