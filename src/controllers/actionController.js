@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
-import { ObjectId } from "mongoose";
 
 export const postLink = async (req, res) => {
   const { url, title, description } = req.body;
@@ -44,6 +43,7 @@ export const postLink = async (req, res) => {
 
 export const readLink = async (req, res) => {
   let userId = req.user.id;
+  //the endpoint needs to accept a last id if it not proivded only give me the first 10
   console.log(userId);
   try {
     const links = await Links.find({ userId: userId, isDeleted: false })
@@ -74,11 +74,16 @@ export const softDeleteLink = async (req, res) => {
     if (!Array.isArray(linkId)) {
       linkId = [linkId];
     }
-
     const objectId = linkId.map((link) => {
       return new mongoose.Types.ObjectId(link);
     });
-    console.log(objectId);
+    const isDeletedCheck = await Links.find({ _id: objectId })
+      .select(["isDeleted"])
+      .lean();
+    console.log(isDeletedCheck[0].isDeleted);
+    if (isDeletedCheck[0].isDeleted) {
+      return res.json({ message: "link already archievd" });
+    }
     const updateResult = await Links.updateMany(
       { _id: { $in: objectId } },
       { $set: { isDeleted: true } }
@@ -96,6 +101,17 @@ export const softDeleteLink = async (req, res) => {
   }
 };
 
-export const archived = async (req, res) => {};
-export const hardDeleteLink = async (req, res) => {};
+export const archived = async (req, res) => {
+  try {
+    const archievdLinks = await Links.find({ isDeleted: true }).lean();
+    return res
+      .status(500)
+      .json({ success: true, message: "archievedLinks", archievdLinks });
+  } catch (error) {
+    console.log(error);
+    return res.staus(500).json({ message: "an error occured" });
+  }
+};
+
 export const restoreLink = async (req, res) => {};
+export const hardDeleteLink = async (req, res) => {};
