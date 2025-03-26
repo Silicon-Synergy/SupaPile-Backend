@@ -27,5 +27,5 @@ export const googleSignInCallback = (req, res) => {
   } catch (error) {
     console.log(error);
   }
-  res.redirect("http://localhost:3000/");
+  res.redirect("http://localhost:2000/");
 };
