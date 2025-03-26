@@ -1,7 +1,8 @@
 import chalk from "chalk";
 import mongoose from "mongoose";
 import ora from "ora";
-
+import dotenv from "dotenv";
+dotenv.config();
 //connect to moongoose
 export const dbConnect = async () => {
   const spinner = ora("connecting to database").start();
