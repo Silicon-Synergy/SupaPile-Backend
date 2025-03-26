@@ -6,34 +6,52 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
 import { dbConnect } from "./src/config/db.js";
-import router from "./src/router/authRoutes.js";
 import "./src/config/passport.js";
 import passport from "passport";
 import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
+// import userRouter from "./src/router/userRoutes.js"; // Uncomment if needed
 
 const PORT = process.env.PORT || 5000;
 const app = express();
+
+// Rate limiter (15 minutes)
 const limiter = rateLimit({
-  windowMs: 15 * 69 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
-  message: "To many request from this ip, please try again later",
-  header: true,
+  message: "Too many requests from this IP, please try again later",
+  headers: true,
 });
 
+// Middlewares
 app.use(limiter);
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://your-frontend.com", // Change this
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(passport.initialize());
+
+// Routes
 app.use("/auth", authRouter);
 app.use("/api", actionRouter);
-// app.use("/api", userRouter);
-//connst to monngodb
-await dbConnect();
-//starting server
-app.listen(PORT, () => {
-  console.log("Server has started");
-  console.log(PORT);
-});
+// app.use("/api/users", userRouter); // Uncomment if needed
+
+// Connect to MongoDB and Start Server
+const startServer = async () => {
+  try {
+    await dbConnect();
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ Database connection failed", error);
+    process.exit(1);
+  }
+};
+
+startServer();
