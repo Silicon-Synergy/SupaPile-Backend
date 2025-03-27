@@ -1,55 +1,75 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
 
-export const postLink = async (req, res) => {
-  const { url, title, description } = req.body;
-  let links = req.body;
+export const postPile = async (req, res) => {
+  let piles = req.body;
   const { id } = req.user;
-
-  if (!Array.isArray(links)) {
-    links = [links];
+  if (!Array.isArray(piles)) {
+    piles = [piles];
   }
 
-  const existingUrl = await Links.findOne(req.body.url);
+  let URLsToCheck = piles.map((pile) => pile.url);
 
-  console.log(existingUrl);
-
-  if (existingUrl) {
-    return res.status(404).json({ message: "Link already exists" });
-  }
   try {
-    const newUserAction = links.map((link) => ({
+    const existingPile = await Links.find({
       userId: id,
-      ...link,
+      url: { $in: URLsToCheck },
+    });
+    const existingURLs = existingPile.map((pile) => pile.url);
+    const nonExistingURLs = await URLsToCheck.filter(
+      (url) => !existingURLs.includes(url)
+    );
+    const pilesToSend = piles.filter((pile) =>
+      nonExistingURLs.includes(pile.url)
+    );
+
+    const formatedNonExistingURLs = pilesToSend.map((pileToSend) => ({
+      userId: id,
+      ...pileToSend,
     }));
+    console.log(formatedNonExistingURLs);
 
-    console.log(url);
-    console.log(newUserAction);
-    await Links.insertMany(newUserAction);
+    await Links.insertMany(formatedNonExistingURLs);
 
-    if (!newUserAction) {
-      return res
-        .status(401)
-        .send({ message: "Couldn't save the link, try again later" });
+    if (existingURLs.length && formatedNonExistingURLs.length) {
+      return res.status(200).send({
+        success: true,
+        message:
+          `saved: ` +
+          "but pile with with this URL not saved already exist: " +
+          existingURLs,
+      });
     }
+    if (existingURLs.length) {
+      return res.status(409).send({
+        success: true,
+        message: `${
+          existingURLs.length > 1 ? "piles already exist" : "pile exists"
+        }`,
+      });
+    }
+
     return res.status(200).send({
       success: true,
-      message: `${links.length > 1 ? "links saved" : "link saved"}`,
+      message: `${
+        formatedNonExistingURLs.length > 1 ? "piles saved" : "pile saved"
+      }`,
     });
   } catch (error) {
     console.log(error);
   }
 };
 
-export const readLink = async (req, res) => {
-  let userId = req.user.id;
-  let {lastId} = req.query;
+export const readPile = async (req, res) => {
+  const { id } = req.user;
+
+  let { lastId } = req.query;
   let limit = 48;
   //the endpoint needs to accept a last id if it not proivded only give me the first id
-  console.log(userId);
+  console.log(id);
   try {
-    const links = await Links.find({
-      userId: userId,
+    const piles = await Links.find({
+      userId: id,
       isDeleted: false,
       ...(lastId && { _id: { $gt: lastId } }),
     })
@@ -61,16 +81,17 @@ export const readLink = async (req, res) => {
     // am not performing any extra action on the object
     // learn makes sure its a javascript object that is returned
     // not a mongoose object
-    if (!links) {
-      return res.json({ message: "no links yet" });
+    if (!piles) {
+      return res.json({ message: "no piles yet" });
     }
-    return res.status(200).json({ success: true, message: links });
+    return res.status(200).json({ success: true, message: piles });
   } catch (error) {
     console.log(error);
   }
 };
 
-export const softDeleteLink = async (req, res) => {
+export const softDeletePile = async (req, res) => {
+  const { id } = req.user;
   try {
     let [{ _id }] = req.body;
     if (!_id) {
@@ -85,7 +106,7 @@ export const softDeleteLink = async (req, res) => {
     const objectId = linkId.map((link) => {
       return new mongoose.Types.ObjectId(link);
     });
-    const isDeletedCheck = await Links.find({ _id: objectId })
+    const isDeletedCheck = await Links.find({ userId: id, _id: objectId })
       .select(["isDeleted"])
       .lean();
     console.log(isDeletedCheck[0].isDeleted);
@@ -109,17 +130,21 @@ export const softDeleteLink = async (req, res) => {
   }
 };
 
-export const archived = async (req, res) => {
+export const archivedPile = async (req, res) => {
+  const { id } = req.user;
   try {
-    const archievdLinks = await Links.find({ isDeleted: true }).lean();
+    const archievdPiles = await Links.find({
+      userId: id,
+      isDeleted: true,
+    }).lean();
     return res
       .status(500)
-      .json({ success: true, message: "archievedLinks", archievdLinks });
+      .json({ success: true, message: "archievedPiles", archievdPiles });
   } catch (error) {
     console.log(error);
     return res.staus(500).json({ message: "an error occured" });
   }
 };
 
-export const restoreLink = async (req, res) => {};
-export const hardDeleteLink = async (req, res) => {};
+export const restorePile= async (req, res) => {};
+export const hardDeletePile = async (req, res) => {};

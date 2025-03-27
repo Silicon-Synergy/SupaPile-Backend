@@ -1,17 +1,17 @@
 import { Router } from "express";
 import jwtVerification from "../middlewares/jwtVerification.js";
 import {
-  archived,
-  postLink,
-  softDeleteLink,
+  archivedPile,
+  postPile,
+  readPile,
+  softDeletePile,
 } from "../controllers/actionController.js";
-import { readLink } from "../controllers/actionController.js";
 
 const actionRouter = Router();
 
-actionRouter.post("/post-link", jwtVerification, postLink);
-actionRouter.get("/read-link", jwtVerification, readLink);
-actionRouter.put("/soft-delete-link", jwtVerification, softDeleteLink);
-actionRouter.get("/archived-link", jwtVerification, archived);
+actionRouter.post("/post-pile", jwtVerification, postPile);
+actionRouter.get("/read-pile", jwtVerification, readPile);
+actionRouter.put("/soft-delete-pile", jwtVerification, softDeletePile);
+actionRouter.get("/archived-pile", jwtVerification, archivedPile);
 
 export default actionRouter;
