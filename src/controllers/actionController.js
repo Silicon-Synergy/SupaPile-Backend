@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
-
+//i need to figure out how to send a category
+// by default its public, and also the category by default is all  
 export const postPile = async (req, res) => {
   let piles = req.body;
   const { id } = req.user;

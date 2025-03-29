@@ -26,6 +26,11 @@ const actionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    visibilty: {
+      type: String,
+      enum: ["public", "private"],
+      default: "public",
+    },
     isDeleted: {
       type: Boolean,
       default: false,

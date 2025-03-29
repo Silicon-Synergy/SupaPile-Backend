@@ -1,0 +1,1 @@
+import { metaScrapper } from "../services/metaScrapper";
