@@ -10,8 +10,7 @@ import "./config/passport.js";
 import passport from "passport";
 import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
-// import userRouter from "./src/router/userRoutes.js"; // Uncomment if needed
-
+import shareRouter from "./src/router/shareRoute.js";
 const PORT = process.env.PORT || 5000;
 const app = express();
 
@@ -39,6 +38,7 @@ app.use(passport.initialize());
 // Routes
 app.use("/auth", authRouter);
 app.use("/api", actionRouter);
+app.use(shareRouter);
 // app.use("/api/users", userRouter); // Uncomment if needed
 
 // Connect to MongoDB and Start Server

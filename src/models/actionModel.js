@@ -26,10 +26,19 @@ const actionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    category: {
+      type: String,
+      trim: true,
+      default: "all",
+    },
     visibilty: {
       type: String,
       enum: ["public", "private"],
-      default: "public",
+    },
+    publicLink: {
+      type: String,
+      trim: "",
+      default: "",
     },
     isDeleted: {
       type: Boolean,

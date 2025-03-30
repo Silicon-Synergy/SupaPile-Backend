@@ -1,17 +1,15 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
-//i need to figure out how to send a category
-// by default its public, and also the category by default is All
+import { randomUUID } from "crypto";
 export const postPile = async (req, res) => {
-  let piles = req.body;
-  const { id } = req.user;
-  if (!Array.isArray(piles)) {
-    piles = [piles];
-  }
-
-  let URLsToCheck = piles.map((pile) => pile.url);
-
   try {
+    let piles = req.body;
+    const { id } = req.user;
+    if (!Array.isArray(piles)) {
+      piles = [piles];
+    }
+
+    let URLsToCheck = piles.map((pile) => pile.url);
     const existingPile = await Links.find({
       userId: id,
       url: { $in: URLsToCheck },
@@ -20,6 +18,7 @@ export const postPile = async (req, res) => {
     const nonExistingURLs = await URLsToCheck.filter(
       (url) => !existingURLs.includes(url)
     );
+
     const pilesToSend = piles.filter((pile) =>
       nonExistingURLs.includes(pile.url)
     );
@@ -63,7 +62,7 @@ export const postPile = async (req, res) => {
 
 export const readPile = async (req, res) => {
   const { id } = req.user;
-
+  const { category = "all" } = req.body;
   let { lastId } = req.query;
   let limit = 48;
   //the endpoint needs to accept a last id if it not proivded only give me the first id
@@ -72,28 +71,26 @@ export const readPile = async (req, res) => {
     const piles = await Links.find({
       userId: id,
       isDeleted: false,
+      category,
       ...(lastId && { _id: { $gt: lastId } }),
     })
-      .select(["userId", "title", "description", "_id"])
+      .select(["userId", "title", "description", "_id", "visibility"])
       .sort({ _id: 1 })
       .limit(limit)
       .lean();
-    // lean is used to optimize the mongodb return since i
-    // am not performing any extra action on the object
-    // learn makes sure its a javascript object that is returned
-    // not a mongoose object
-    if (!piles) {
+    console.log(piles);
+    if (!piles || piles.length <= 0) {
       return res.json({ message: "no piles yet" });
     }
-    return res.status(200).json({ success: true, message: piles });
+    return res.status(200).json({ success: true, data: piles });
   } catch (error) {
     console.log(error);
   }
 };
 
 export const softDeletePile = async (req, res) => {
-  const { id } = req.user;
   try {
+    const { id } = req.user;
     let [{ _id }] = req.body;
     if (!_id) {
       return res
@@ -132,21 +129,155 @@ export const softDeletePile = async (req, res) => {
 };
 
 export const archivedPile = async (req, res) => {
-  const { id } = req.user;
   try {
+    const { id } = req.user;
     const archievdPiles = await Links.find({
       userId: id,
       isDeleted: true,
-    }).lean();
+    })
+      .select(["id", "url", "title", "description"])
+      .lean();
     return res
-      .status(500)
-      .json({ success: true, message: "archievedPiles", archievdPiles });
+      .status(200)
+      .json({ success: true, message: "archievedPiles", data: archievdPiles });
   } catch (error) {
     console.log(error);
     return res.staus(500).json({ message: "an error occured" });
   }
 };
 
-export const restorePile= async (req, res) => {};
-export const hardDeletePile = async (req, res) => {};
+export const generatePublicLink = async (req, res) => {
+  try {
+    const { id } = req.user;
+    console.log(id);
+    const randomuuID = randomUUID();
+    console.log(randomuuID);
+    const result = await Links.updateMany(
+      { userId: id, visibility: "public" },
+      { $set: { publicLink: randomuuID } }
+    );
+    //i have to replace with an actual domain
+    const link = `http://localhost:5223/api/share/${randomuuID}`;
+    console.log(result);
+    return res.status(200).json({ success: true, data: link });
+  } catch (error) {
+    console.log(error);
+  }
+};
 
+export const userPublicList = async (req, res) => {
+  try {
+    const { uuID } = req.params;
+    console.log(uuID);
+    const result = await Links.find({ publicLink: uuID, visibility: "public" })
+      .select(["url", "title", "description", "-_id"])
+      .lean();
+    console.log(result);
+    if (!result || result.length <= 0) {
+      return res.status(404).json({ message: "404 not found" });
+    }
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const restorePile = async (req, res) => {
+  try {
+    const { id } = req.user;
+    let [{ _id }] = req.body;
+    if (!_id) {
+      return res
+        .status(400)
+        .json({ message: "Ivalid Request, Id is required" });
+    }
+    let linkId = _id;
+    if (!Array.isArray(linkId)) {
+      linkId = [linkId];
+    }
+    const objectId = linkId.map((link) => {
+      return new mongoose.Types.ObjectId(link);
+    });
+    const result = await Links.updateMany(
+      {
+        userId: id,
+        _id: _id,
+        isDeleted: true,
+      },
+      { $set: { isDeleted: false } }
+    );
+    console.log(result);
+    if (!result || result.modifiedCount <= 0) {
+      return res.status(500).json({ message: "not restored" });
+    }
+    return res.status(200).json({ success: true, message: "pile restored" });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const hardDeletePile = async (req, res) => {
+  try {
+    const { id } = req.user;
+    let [{ _id }] = req.body;
+    if (!_id) {
+      return res
+        .status(400)
+        .json({ message: "Ivalid Request, Id is required" });
+    }
+    let linkId = _id;
+    if (!Array.isArray(linkId)) {
+      linkId = [linkId];
+    }
+    const objectId = linkId.map((link) => {
+      return new mongoose.Types.ObjectId(link);
+    });
+    const result = await Links.deleteMany({
+      userId: id,
+      _id: _id,
+      isDeleted: true,
+    });
+    if (!result || result.deletedCount <= 0) {
+      return res.status(500).json({ message: "Pile not deleted" });
+    }
+    console.log(result);
+    return res
+      .status(200)
+      .json({ success: true, message: "Pile permanetly deleted" });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const changeCategory = async (req, res) => {
+  try {
+    const { id } = req.user;
+    let _id = req.body;
+    const { category } = req.body;
+    console.log(_id);
+    if (Array.isArray(_id)) {
+      throw new TypeError("Expected item to be an object.");
+    }
+    const result = await Links.updateOne(
+      { userId: id, _id },
+      { $set: { category } }
+    );
+    console.log(result);
+    if (!result || result.modifiedCount <= 0) {
+      return res
+        .status(500)
+        .json({ success: false, message: "couldn't change category " });
+    }
+    return res.status(200).json({ success: true, data: "category changed" });
+  } catch (error) {
+    console.log(error);
+    if (error instanceof TypeError) {
+      return res.status(400).json({ error: "invalid input: " + error.message });
+    }
+
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
