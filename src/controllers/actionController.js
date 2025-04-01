@@ -62,25 +62,24 @@ export const postPile = async (req, res) => {
 
 export const readPile = async (req, res) => {
   const { id } = req.user;
-  const { category = "all" } = req.body;
+  const { category = "all" } = req.params;
   let { lastId } = req.query;
   let limit = 48;
-  //the endpoint needs to accept a last id if it not proivded only give me the first id
   console.log(id);
   try {
-    const piles = await Links.find({
-      userId: id,
-      isDeleted: false,
-      category,
-      ...(lastId && { _id: { $gt: lastId } }),
-    })
+    let piles;
+    let query = { userId: id, isDeleted: false };
+    if (category != "all") query.category = category;
+
+    piles = await Links.find(query)
       .select(["userId", "title", "description", "_id", "visibility"])
       .sort({ _id: 1 })
       .limit(limit)
       .lean();
+
     console.log(piles);
     if (!piles || piles.length <= 0) {
-      return res.json({ message: "no piles yet" });
+      return res.json({ message: "category doesn't exist" });
     }
     return res.status(200).json({ success: true, data: piles });
   } catch (error) {

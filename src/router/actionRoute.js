@@ -15,7 +15,7 @@ import {
 const actionRouter = Router();
 
 actionRouter.post("/post-pile", jwtVerification, postPile);
-actionRouter.get("/read-pile", jwtVerification, readPile);
+actionRouter.get("/read-pile/:category", jwtVerification, readPile);
 actionRouter.put("/soft-delete-pile", jwtVerification, softDeletePile);
 actionRouter.get("/archived-pile", jwtVerification, archivedPile);
 actionRouter.get("/generate-public-link", jwtVerification, generatePublicLink);

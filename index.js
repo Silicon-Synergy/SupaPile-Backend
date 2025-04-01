@@ -27,7 +27,7 @@ app.use(limiter);
 app.use(helmet());
 app.use(
   cors({
-    origin: "https://your-frontend.com", // Change this
+    origin: "http://localhost:2000/", // Change this
     credentials: true,
   })
 );
