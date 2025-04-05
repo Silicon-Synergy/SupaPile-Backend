@@ -13,7 +13,10 @@ import actionRouter from "./src/router/actionRoute.js";
 import shareRouter from "./src/router/shareRoute.js";
 const PORT = process.env.PORT || 5000;
 const app = express();
-
+const whiteList = [
+  "localhost//5223",
+  "https://supapile-backend.up.railway.app",
+];
 // Rate limiter (15 minutes)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -24,10 +27,18 @@ const limiter = rateLimit({
 
 // Middlewares
 app.use(limiter);
+
 app.use(helmet());
+
 app.use(
   cors({
-    origin: "https://supapile-backend.up.railway.app", // Change this
+    origin: (origin, callback) => {
+      if (whiteList.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
