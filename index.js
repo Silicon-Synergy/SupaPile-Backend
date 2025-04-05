@@ -27,7 +27,7 @@ app.use(limiter);
 app.use(helmet());
 app.use(
   cors({
-    origin: "http://localhost:2000", // Change this
+    origin: "https://supapile-backend.up.railway.app", // Change this
     credentials: true,
   })
 );
