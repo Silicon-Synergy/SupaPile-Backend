@@ -20,22 +20,22 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      // secure: process.env.NODE_ENV === "production", // Secure cookies in production
-      secure: false,  
-      // sameSite: "strict", // Prevents CSRF attacks
-      sameSite:"None",
+      secure: false, // For localhost
+      sameSite: "Lax",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
       secure: false,
-      // sameSite: "strict",
-      sameSite:"None",
+      sameSite: "Lax",
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+    console.log("Test Headers:", res.getHeaders());
+    // res.send("Cookies set, check DevTools");
     //i need to replace with the actual website domain
-    res.redirect("http://localhost:2000/");
+    res.redirect("http://localhost:2000");
   } catch (error) {
     console.log(error);
   }

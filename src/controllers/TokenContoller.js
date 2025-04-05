@@ -3,6 +3,7 @@ import { generateAccessToken } from "../utilities/generateTokens.js";
 
 export const refreshToken = async (req, res) => {
   const { refreshToken } = req.cookies;
+  console.log(req.cookies)
   if (!refreshToken) {
     return res.status(404).json({ message: "no token provided" });
   }
