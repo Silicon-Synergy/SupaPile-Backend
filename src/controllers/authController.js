@@ -20,13 +20,15 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Secure cookies in production
+      // secure: process.env.NODE_ENV === "production", // Secure cookies in production
+      secure: false,  
       sameSite: "strict", // Prevents CSRF attacks
       maxAge: 15 * 60 * 1000,
     });
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // secure: process.env.NODE_ENV === "production",
+      secure: false,
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -45,7 +47,7 @@ export const userData = async (req, res) => {
       .json({ succes: false, message: "user UnAuthorized" });
   }
   const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
-  console.log(decoded)
+  console.log(decoded);
   console.log(decoded.id);
   try {
     const user = await User.findOne({ _id: decoded.id }).select([
@@ -53,7 +55,7 @@ export const userData = async (req, res) => {
       "name",
       "-_id",
     ]);
-    console.log(user)
+    console.log(user);
     return res.status(200).json({ success: true, data: user });
   } catch (error) {
     console.log(error);
