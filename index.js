@@ -14,7 +14,7 @@ import shareRouter from "./src/router/shareRoute.js";
 const PORT = process.env.PORT || 5000;
 const app = express();
 const whiteList = [
-  "localhost//5223",
+  "http://localhost:2000",
   "https://supapile-backend.up.railway.app",
 ];
 // Rate limiter (15 minutes)
