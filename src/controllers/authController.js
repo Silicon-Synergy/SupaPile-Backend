@@ -18,16 +18,19 @@ export const googleSignInCallback = (req, res) => {
     console.log(accessToken);
     console.log(refreshToken);
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: false, // For localhost
+      secure: isProduction, // Set to true in production, false in development (localhost)
       sameSite: "Lax",
       path: "/",
       maxAge: 15 * 60 * 1000,
     });
+    
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: isProduction, // Same here
       sameSite: "Lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
