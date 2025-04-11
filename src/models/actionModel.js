@@ -12,19 +12,20 @@ const actionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    image: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     title: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     description: {
       type: String,
-      required: true,
       trim: true,
-    },
-    ogImage: {
-      type: String,
-      trim: true,
+      default: "",
     },
     category: {
       type: String,

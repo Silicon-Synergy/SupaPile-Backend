@@ -1,9 +1,8 @@
-import * as Cheerio from "cheerio";
 import axios from "axios";
-export const metaScrapper = async (req, res) => {
+import * as Cheerio from "cheerio";
+
+export const generateMeta = async (url) => {
   try {
-    console.log("trying to fetch.....")
-    const { url } = req.query;
     const decodedUrl = decodeURIComponent(url);
     const response = await axios.get(decodedUrl, {
       headers: {
@@ -20,9 +19,8 @@ export const metaScrapper = async (req, res) => {
     const description = $('meta[name="description"]').attr("content");
     const image = $('meta[property="og:image"]').attr("content");
     const result = { title, description, image };
-    console.log(result)
-    return res.status(200).json({ success: true, data: result });
+    return result
   } catch (error) {
-    return new Error("failed to fetchMeta data");
+    console.error(error);
   }
 };

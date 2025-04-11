@@ -22,7 +22,8 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: isProduction, // Set to true in production, false in development (localhost)
+      // secure: isProduction, // Set to true in production, false in development (localhost)
+      secure:false,
       sameSite: "Lax",
       path: "/",
       maxAge: 15 * 60 * 1000,
@@ -30,7 +31,8 @@ export const googleSignInCallback = (req, res) => {
     
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction, // Same here
+      // secure: isProduction, // Same here
+      secure:false,
       sameSite: "Lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,

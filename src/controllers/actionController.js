@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
 import { randomUUID } from "crypto";
+import { generateMeta } from "../utilities/generateMeta.js";
 export const postPile = async (req, res) => {
   try {
     let piles = req.body;
@@ -8,7 +9,6 @@ export const postPile = async (req, res) => {
     if (!Array.isArray(piles)) {
       piles = [piles];
     }
-
     let URLsToCheck = piles.map((pile) => pile.url);
     const existingPile = await Links.find({
       userId: id,
@@ -72,12 +72,59 @@ export const readPile = async (req, res) => {
     if (category != "all") query.category = category;
 
     piles = await Links.find(query)
-      .select(["userId", "title", "description", "_id", "visibility"])
+      .select(["_id", "url", "image", "tile", "description", "visibility"])
       .sort({ _id: 1 })
       .limit(limit)
       .lean();
-
     console.log(piles);
+    const results = piles.map((pile) => ({ url: pile.url, id: pile._id }));
+    console.log(results);
+
+    const retrievedMeta = async (results) => {
+      try {
+        console.log(results.id);
+        const theMetaResults = await Promise.all(
+          results.map(async (result) => {
+            const metaResults = await generateMeta(result.url);
+            console.log(metaResults);
+
+            const myMetaResult = await Promise.all(
+              metaResults.map(async (meta) => ({
+                ...meta,
+                id: meta.id,
+              }))
+            );
+
+            return myMetaResult;
+          })
+        );
+
+        console.log(theMetaResults);
+        const updates = await Promise.all(
+          theMetaResults.map(async (metaResult) => {
+            console.log("Meta Title:", metaResult.title);
+            // Await the updateMany operation here
+            const updateResult = await Links.updateOne(
+              { userId: id, _id: results.id },
+              {
+                $set: {
+                  image: metaResult.image,
+                  title: metaResult.title,
+                  description: metaResult.description,
+                },
+              }
+            );
+            return updateResult;
+          })
+        );
+
+        console.log("All updates done:", updates);
+      } catch (error) {
+        console.log("Error during retrieval or update:", error);
+      }
+    };
+    retrievedMeta(results);
+    console.log("should print first");
     if (!piles || piles.length <= 0) {
       return res.json({ message: "category doesn't exist" });
     }

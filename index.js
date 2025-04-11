@@ -11,6 +11,7 @@ import passport from "passport";
 import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
 import shareRouter from "./src/router/shareRoute.js";
+import metaScrapperRouter from "./src/router/serviceRoute.js";
 const PORT = process.env.PORT || 5000;
 const app = express();
 // const whiteList = [
@@ -45,6 +46,7 @@ app.use(passport.initialize());
 app.use("/auth", authRouter);
 app.use("/api", actionRouter);
 app.use(shareRouter);
+app.use(metaScrapperRouter)
 // app.use("/api/users", userRouter); // Uncomment if needed
 
 // Connect to MongoDB and Start Server
