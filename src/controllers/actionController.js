@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
 import { randomUUID } from "crypto";
 import { generateMeta } from "../utilities/generateMeta.js";
+import { io } from "../../index.js";
 export const postPile = async (req, res) => {
   try {
     let piles = req.body;
@@ -65,47 +66,43 @@ export const readPile = async (req, res) => {
   const { category = "all" } = req.params;
   let { lastId } = req.query;
   let limit = 48;
-  console.log(id);
+  // console.log(id);
   try {
     let piles;
     let query = { userId: id, isDeleted: false };
     if (category != "all") query.category = category;
 
     piles = await Links.find(query)
-      .select(["_id", "url", "image", "tile", "description", "visibility"])
+      .select(["_id", "url", "image", "title", "description", "visibility"])
       .sort({ _id: 1 })
       .limit(limit)
       .lean();
-    console.log(piles);
-    const results = piles.map((pile) => ({ url: pile.url, id: pile._id }));
-    console.log(results);
+    // console.log(piles);
+    const results = piles.map((pile) => ({ id: pile._id, url: pile.url }));
+    // console.log(results);
 
+    const notExistingMeta = await Links.find({
+      userId: id,
+      // image: "",
+      title: "",
+      description: "",
+    });
+    console.log(notExistingMeta);
     const retrievedMeta = async (results) => {
       try {
-        console.log(results.id);
-        const theMetaResults = await Promise.all(
-          results.map(async (result) => {
-            const metaResults = await generateMeta(result.url);
-            console.log(metaResults);
-
-            const myMetaResult = await Promise.all(
-              metaResults.map(async (meta) => ({
-                ...meta,
-                id: meta.id,
-              }))
-            );
-
-            return myMetaResult;
-          })
+        const metaResults = await Promise.all(
+          results.map((result) => generateMeta(result))
         );
+        console.log("jsjsjsj");
+        console.log(metaResults);
 
-        console.log(theMetaResults);
+        console.log("passed");
         const updates = await Promise.all(
-          theMetaResults.map(async (metaResult) => {
-            console.log("Meta Title:", metaResult.title);
-            // Await the updateMany operation here
+          metaResults.map(async (metaResult) => {
+            // Await the updateMany operation her
+
             const updateResult = await Links.updateOne(
-              { userId: id, _id: results.id },
+              { userId: id, _id: metaResult.id },
               {
                 $set: {
                   image: metaResult.image,
@@ -114,17 +111,30 @@ export const readPile = async (req, res) => {
                 },
               }
             );
+
+            console.log("this is the");
+            console.log(updateResult);
+            if (updateResult.modifiedCount > 0) {
+              io.emit("metaUpdate", {
+                id: metaResult.id,
+                image: metaResult.image,
+                title: metaResult.title,
+                description: metaResult.description,
+              });
+            }
             return updateResult;
           })
         );
 
-        console.log("All updates done:", updates);
+        // console.log("All updates done:", updates);
       } catch (error) {
         console.log("Error during retrieval or update:", error);
       }
     };
-    retrievedMeta(results);
-    console.log("should print first");
+
+    retrievedMeta(notExistingMeta);
+
+    // console.log("should print first");
     if (!piles || piles.length <= 0) {
       return res.json({ message: "category doesn't exist" });
     }

@@ -1,9 +1,9 @@
 import axios from "axios";
 import * as Cheerio from "cheerio";
 
-export const generateMeta = async (url) => {
+export const generateMeta = async (theObject) => {
+  const decodedUrl = decodeURIComponent(theObject.url);
   try {
-    const decodedUrl = decodeURIComponent(url);
     const response = await axios.get(decodedUrl, {
       headers: {
         "User-Agent":
@@ -13,14 +13,26 @@ export const generateMeta = async (url) => {
       },
     });
 
+    // https://chatgpt.com/c/67fbbbeb-0018-800d-a665-2dff1a4c60d8
     const $ = Cheerio.load(response.data);
 
+    // console.log(domain);
+    // console.log("jhey")
     const title = $("head title").text();
     const description = $('meta[name="description"]').attr("content");
     const image = $('meta[property="og:image"]').attr("content");
-    const result = { title, description, image };
-    return result
+    const result = { title, description, image, id: theObject.id };
+    return result;
   } catch (error) {
-    console.error(error);
+    console.log(decodedUrl);
+    const domain1 = new URL(decodedUrl).hostname.split(".")[0];
+    const domain2 = new URL(decodedUrl).hostname;
+    const result = {
+      title: domain1,
+      description: `from ${domain2}`,
+      image: "",
+      id: theObject.id,
+    };
+    return result;
   }
 };

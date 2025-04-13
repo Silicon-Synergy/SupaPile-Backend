@@ -12,32 +12,45 @@ import authRouter from "./src/router/authRoutes.js";
 import actionRouter from "./src/router/actionRoute.js";
 import shareRouter from "./src/router/shareRoute.js";
 import metaScrapperRouter from "./src/router/serviceRoute.js";
+import { createServer } from "node:http";
+import { Server } from "socket.io";
+
+//variable initialization
 const PORT = process.env.PORT || 5000;
 const app = express();
+const server = createServer(app);
+
 // const whiteList = [
 
 //   "https://supapile-backend.up.railway.app",
 // ];
 // Rate limiter (15 minutes)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: "Too many requests from this IP, please try again later",
-  headers: true,
-});
+
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100,
+//   message: "Too many requests from this IP, please try again later",
+//   headers: true,
+// });
 
 // Middlewares
-app.use(limiter);
+// app.use(limiter);
 
 app.use(helmet());
-
 app.use(
   cors({
-    origin:"http://localhost:2000",
-    optionsSuccessStatus:200,
+    origin: "http://localhost:2000",
+    optionsSuccessStatus: 200,
     credentials: true,
   })
 );
+export const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:2000",
+    optionsSuccessStatus: 200,
+    credentials: true,
+  },
+});
 app.use(cookieParser());
 app.use(express.json());
 app.use(passport.initialize());
@@ -46,14 +59,18 @@ app.use(passport.initialize());
 app.use("/auth", authRouter);
 app.use("/api", actionRouter);
 app.use(shareRouter);
-app.use(metaScrapperRouter)
-// app.use("/api/users", userRouter); // Uncomment if needed
+app.use(metaScrapperRouter);
+
+// integrating socket io
+io.on("connection", (socket) => {
+  console.log("A user coonnected");
+});
 
 // Connect to MongoDB and Start Server
 const startServer = async () => {
   try {
     await dbConnect();
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
     });
   } catch (error) {
