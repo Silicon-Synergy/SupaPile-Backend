@@ -1,7 +1,6 @@
 import { Router } from "express";
-import { userPublicList } from "../controllers/actionController.js";
-
+import { userPublicLinkList } from "../controllers/actionController.js";
 const shareRouter = Router();
 
-shareRouter.get("/share/:uuID", userPublicList);
+shareRouter.get("/share/:uuID", userPublicLinkList);
 export default shareRouter;

@@ -3,6 +3,8 @@ import * as Cheerio from "cheerio";
 
 export const generateMeta = async (theObject) => {
   const decodedUrl = decodeURIComponent(theObject.url);
+  const domain1 = new URL(decodedUrl).hostname.split(".")[0];
+  const domain2 = new URL(decodedUrl).hostname;
   try {
     const response = await axios.get(decodedUrl, {
       headers: {
@@ -19,14 +21,15 @@ export const generateMeta = async (theObject) => {
     // console.log(domain);
     // console.log("jhey")
     const title = $("head title").text();
-    const description = $('meta[name="description"]').attr("content");
+    let description =
+      $('meta[name="description"]').attr("content") || `from ${domain2}`;
     const image = $('meta[property="og:image"]').attr("content");
     const result = { title, description, image, id: theObject.id };
+    console.log(description);
+    console.log("hi i am Ayotide");
     return result;
   } catch (error) {
     console.log(decodedUrl);
-    const domain1 = new URL(decodedUrl).hostname.split(".")[0];
-    const domain2 = new URL(decodedUrl).hostname;
     const result = {
       title: domain1,
       description: `from ${domain2}`,

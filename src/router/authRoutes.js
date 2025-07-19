@@ -27,6 +27,7 @@ authRouter.get(
       .json({ error: "Authentication failed", details: err.message });
   }
 );
+
 authRouter.get("/me", jwtVerification, userData);
 authRouter.get("/refresh-token", refreshToken);
 

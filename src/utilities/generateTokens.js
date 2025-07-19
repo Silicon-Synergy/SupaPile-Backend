@@ -11,3 +11,10 @@ export const generateRefreshAcessToken = (_id) => {
     expiresIn: "7d",
   });
 };
+
+export const generatePublicToken = (uuID) => {
+  console.log(uuID);
+  return jwt.sign({ uuID }, process.env.JWT_SECRET, {
+    expiresIn: "2m",
+  });
+};

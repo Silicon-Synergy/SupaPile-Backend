@@ -32,16 +32,16 @@ const actionSchema = new mongoose.Schema(
       trim: true,
       default: "all",
     },
-    visibilty: {
-      type: String,
-      enum: ["public", "private"],
+   visibility: {
+      type: Boolean,
+      default:false
     },
     publicLink: {
       type: String,
       trim: "",
       default: "",
     },
-    isDeleted: {
+    isArchived: {
       type: Boolean,
       default: false,
     },

@@ -1,0 +1,5 @@
+- i need to make sure i don't use this in prod: 0.0.0.0/0
+- learn about DNS
+- learn how to handle bad network 
+-- i need to figure out why my localhost backend is taking two seconds before update
+-- can i use a non-relational database for caching instead fopr cahcing
