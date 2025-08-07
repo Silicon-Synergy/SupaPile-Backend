@@ -32,11 +32,11 @@ const actionSchema = new mongoose.Schema(
       trim: true,
       default: "all",
     },
-   visibility: {
+    visibility: {
       type: Boolean,
-      default:false
+      default: false,
     },
-    publicLink: {
+    publicLinkToken: {
       type: String,
       trim: "",
       default: "",
@@ -48,6 +48,9 @@ const actionSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+    expiresAt:{
+      type:Number,
+    }
   },
   { timestamps: true }
 );

@@ -20,35 +20,35 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 const server = createServer(app);
 
-// const whiteList = [
-
-//   "https://supapile-backend.up.railway.app",
-// ];
+// const whiteList = ["https://supapile-backend.up.railway.app"];
 // Rate limiter (15 minutes)
 
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100,
-//   message: "Too many requests from this IP, please try again later",
-//   headers: true,
-// });
+
 
 // Middlewares
 // app.use(limiter);
 
 app.use(helmet());
+const allowedOrigins = ["http://localhost:2000", "http://192.168.0.3:2000"];
+
 app.use(
   cors({
-    origin: "http://localhost:2000",
-    optionsSuccessStatus: 200,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
+    optionsSuccessStatus: 200,
   })
 );
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:2000",
-    optionsSuccessStatus: 200,
+    origin: allowedOrigins,
     credentials: true,
+    optionsSuccessStatus: 200,
   },
 });
 app.use(cookieParser());

@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { generateMeta } from "../utilities/generateMeta.js";
 import { generatePublicToken } from "../utilities/generateTokens.js";
 import jwt from "jsonwebtoken";
+import { nanoid } from "nanoid";
 export const postPile = async (req, res) => {
   try {
     let piles = req.body;
@@ -15,6 +16,7 @@ export const postPile = async (req, res) => {
     const existingPile = await Links.find({
       userId: id,
       url: { $in: URLsToCheck },
+      isArchived:true
     });
 
     const existingURLs = existingPile.map((pile) => pile.url);
@@ -30,37 +32,43 @@ export const postPile = async (req, res) => {
       userId: id,
       ...pileToSend,
     }));
+
+    if (formatedNonExistingURLs.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "This link already exists in your pile.",
+      });
+    }
+
     console.log(formatedNonExistingURLs);
 
-    await Links.insertMany(formatedNonExistingURLs);
+    const insertedLinks = await Links.insertMany(formatedNonExistingURLs);
 
-    if (existingURLs.length && existingURLs.isArchived) {
-      return res.status(200).send({
-        message: "pile exist but archived " + existingURLs,
-      });
-    }
-    if (existingURLs.length && formatedNonExistingURLs.length) {
-      return res.status(200).send({
-        message:
-          `saved: ` +
-          "but pile with this URL not saved already exist: " +
-          existingURLs,
-      });
-    }
-    if (existingURLs.length) {
-      return res.status(409).send({
-        success: true,
-        message: `${
-          existingURLs.length > 1 ? "piles already exist" : "pile exists"
-        }`,
-      });
-    }
+    // Generate and update metadata for each new link
+    await Promise.all(
+      insertedLinks.map(async (pile) => {
+        try {
+          const meta = await generateMeta({ url: pile.url, id: pile._id });
+          await Links.updateOne(
+            { _id: pile._id },
+            {
+              $set: {
+                image: meta.image,
+                title: meta.title,
+                description: meta.description,
+              },
+            }
+          );
+        } catch (err) {
+          console.log("Meta generation failed for:", pile.url, err);
+        }
+      })
+    );
 
-    return res.status(200).send({
+    return res.status(200).json({
       success: true,
-      message: `${
-        formatedNonExistingURLs.length > 1 ? "piles saved" : "pile saved"
-      }`,
+      saved: formatedNonExistingURLs.map((p) => p.url),
+      existing: existingURLs,
     });
   } catch (error) {
     console.log(error);
@@ -70,13 +78,18 @@ export const postPile = async (req, res) => {
 export const readPile = async (req, res) => {
   const { id } = req.user;
   const { category = "all" } = req.params;
-  let { lastId, keyword, page = 1, limit = 18 } = req.query;
+  let { lastId, keyword, limit = 18 } = req.query;
 
-  const skip = (page - 1) * limit;
+  // const skip = (page - 1) * limit;
 
   try {
     let piles;
     let query = { userId: id, isArchived: false };
+
+    if (lastId && mongoose.Types.ObjectId.isValid(lastId)) {
+      query._id = { $lt: new mongoose.Types.ObjectId(lastId) };
+      //this will fetch id less than the previous one sent (older items)
+    }
 
     if (category !== "all") {
       query.category = category;
@@ -101,62 +114,28 @@ export const readPile = async (req, res) => {
         "visibility",
         "category",
       ])
-      .sort({ _id: 1 })
-      .skip(Number(skip))
+      .sort({ _id: -1 }) // ensures result are in ascending order by creation of time
       .limit(Number(limit))
       .lean();
 
     const totalCount = await Links.countDocuments(query);
-    const hasMore = skip + piles.length < totalCount;
+    const hasMore = piles.length === Number(limit);
+    const newLastId = piles.length > 0 ? piles[piles.length - 1]._id : null;
     const results = piles.map((pile) => ({ id: pile._id, url: pile.url }));
-    const notExistingMeta = await Links.find({
-      userId: id,
-      title: "",
-      description: "",
-    });
-
-    console.log(notExistingMeta);
-    const retrievedMeta = async (results) => {
-      try {
-        const metaResults = await Promise.all(
-          results.map((result) => generateMeta(result))
-        );
-        console.log("jsjsjsj");
-        console.log(metaResults);
-
-        console.log("passed");
-        const updates = await Promise.all(
-          metaResults.map(async (metaResult) => {
-            const updateResult = await Links.updateOne(
-              { userId: id, _id: metaResult.id },
-              {
-                $set: {
-                  image: metaResult.image,
-                  title: metaResult.title,
-                  description: metaResult.description,
-                },
-              }
-            );
-
-            console.log("this is the");
-            console.log(updateResult);
-            return updateResult;
-          })
-        );
-      } catch (error) {
-        console.log("Error during retrieval or update:", error);
-      }
-    };
-
-    retrievedMeta(notExistingMeta);
 
     if (!piles || piles.length <= 0) {
       return res.json({ message: "doesn't exist" });
     }
-
-    return res.status(200).json({ success: true, data: { piles, hasMore } });
+    console.log(piles);
+    return res
+      .status(200)
+      .json({ success: true, data: { piles, hasMore, newLastId } });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while reading piles.",
+    });
   }
 };
 
@@ -215,17 +194,32 @@ export const softDeletePile = async (req, res) => {
 };
 
 export const archivedPile = async (req, res) => {
+  const { id } = req.user;
+  const { lastId, limit = 18 } = req.query;
+
   try {
-    const { id } = req.user;
-    const archievdPiles = await Links.find({
-      userId: id,
-      isArchived: true,
-    })
-      .select(["id", "image", "url", "title", "description", "category"])
+    const query = { userId: id, isArchived: true };
+
+    if (lastId && mongoose.Types.ObjectId.isValid(lastId)) {
+      query._id = { $lt: new mongoose.Types.ObjectId(lastId) };
+    }
+
+    const archivedPiles = await Links.find(query)
+      .select(["_id", "image", "url", "title", "description", "category"])
+      .limit(Number(limit))
       .lean();
-    return res
-      .status(200)
-      .json({ success: true, message: "archievedPiles", data: archievdPiles });
+
+    const hasMore = archivedPiles.length === Number(limit);
+    const newLastId =
+      archivedPile.length > 0
+        ? archivedPiles[archivedPiles.length - 1]._id
+        : null;
+
+    return res.status(200).json({
+      success: true,
+      message: "archivedPiles",
+      data: { piles: archivedPiles, hasMore, newLastId },
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "an error occured" });
@@ -233,46 +227,73 @@ export const archivedPile = async (req, res) => {
 };
 
 export const generatePublicLink = async (req, res) => {
+  const { id } = req.user;
+  const now = Date.now();
+  //60
+  const expiresAt = now + 150 * 1000; // 40 seconds from now
+  let publicLinkToken;
   try {
-    const { id } = req.user;
-    console.log(id);
-    const randomuuID = randomUUID();
-    const newLink = generatePublicToken(randomuuID);
-    const result = await Links.updateMany(
-      { userId: id, visibility: true },
-      { $set: { publicLink: newLink } }
-    );
-    console.log("hehehehe");
-    console.log(newLink); //i have to replace with an actual domain
-    const link = `http://localhost:2000/api/share/${newLink}`;
-    console.log(result);
-    return res.status(200).json({ success: true, data: link });
+    const existing = await Links.findOne({
+      userId: id,
+      publicLinkToken: { $ne: "" },
+      visibility: true,
+      expiresAt: { $gt: new Date(now) },
+    });
+
+    if (!existing) {
+      publicLinkToken = nanoid(8);
+
+      const result = await Links.updateMany(
+        { userId: id, visibility: true },
+        {
+          $set: {
+            publicLinkToken,
+            expiresAt: new Date(expiresAt),
+          },
+        }
+      );
+
+      const link = `http://localhost:2000/api/share/${publicLinkToken}`;
+      console.log(publicLinkToken);
+      console.log(result);
+      return res.status(200).json({ success: true, data: link, expiresAt });
+    } else {
+      publicLinkToken = existing.publicLinkToken;
+    }
+
+    // Reuse existing token
+    return res.status(200).json({
+      data: `http://localhost:2000/api/share/${existing.publicLinkToken}`,
+      existing: existing.expiresAt,
+    });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 export const userPublicLinkList = async (req, res) => {
+  const { publicLinkToken } = req.params;
+
   try {
-    const { uuID } = req.params;
     const result = await Links.aggregate([
       {
         $match: {
-          publicLink: uuID,
+          publicLinkToken: publicLinkToken,
           visibility: true,
           isArchived: false,
         },
       },
       {
         $lookup: {
-          from: "users", // must be the exact name of your collection in MongoDB (usually lowercase plural: 'users')
+          from: "users",
           localField: "userId",
           foreignField: "_id",
           as: "user",
         },
       },
       {
-        $unwind: "$user", // flattens the user array into an object
+        $unwind: "$user",
       },
       {
         $project: {
@@ -285,26 +306,31 @@ export const userPublicLinkList = async (req, res) => {
         },
       },
     ]);
+    const Link = await Links.findOne({ publicLinkToken }).select([
+      "-_id",
+      "expiresAt",
+    ]);
+    if (!Link) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+    if (Link.expiresAt && new Date() > new Date(Link.expiresAt)) {
+      return res.status(410).json({ message: "Link has expired" });
+    }
 
-    console.log(result);
-    const decoded = jwt.verify(uuID, process.env.JWT_SECRET);
-    console.log(decoded);
-    if (!result || result.length <= 0) {
+    console.log("i love ayotide");
+    console.log(Link);
+    if (!result || result.length === 0) {
       return res.status(404).json({ message: "404 not found" });
     }
-    if (!decoded) {
-      await Links.deleteMany({ publicLink: uuID });
-      return res.status(200).json({ message: "nothing to see here" });
-    }
+
     return res.status(200).json({
       success: true,
       data: result,
+      expiresAt: Link?.expiresAt ?? null,
     });
   } catch (error) {
-    if (error.name === "TokenExpiredError") {
-      return res.status(403).json({ message: "nothing to see here" });
-    }
     console.log(error);
+    return res.status(500).json({ message: "Something went wrong" });
   }
 };
 
@@ -440,15 +466,16 @@ export const changeVisibility = async (req, res) => {
   console.log("heyehey");
   console.log(_id);
 
-  if (!_id) {
+  if (!mongoose.Types.ObjectId.isValid(_id)) {
     return res
-      .status(404)
+      .status(400)
       .json({ success: false, message: "someting went wrong" });
   }
   try {
-    const result = await Links.findOne({ userId: id, _id }).select(
-      "visibility"
-    );
+    const result = await Links.findOne({
+      userId: id,
+      _id: new mongoose.Types.ObjectId(_id),
+    }).select("visibility");
 
     console.log(result.visibility);
 

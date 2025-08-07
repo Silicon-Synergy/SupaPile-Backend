@@ -50,8 +50,8 @@ export const userData = async (req, res) => {
   const { accessToken } = req.cookies;
   if (!accessToken) {
     return res
-      .status(404)
-      .json({ succes: false, message: "user UnAuthorized" });
+      .status(401)
+      .json({ success: false, message: "user UnAuthorized" });
   }
   const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
   console.log(decoded);
@@ -62,9 +62,13 @@ export const userData = async (req, res) => {
       "name",
       "-_id",
     ]);
+     if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
     console.log(user);
     return res.status(200).json({ success: true, data: user });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };

@@ -4,15 +4,15 @@ const jwtVerification = (req, res, next) => {
   console.log(req.cookies);
   const { accessToken } = req.cookies;
   if (!accessToken)
-    return res.status(400).json({
+    return res.status(401).json({
       success: false,
-      message: "Authentication failed due to invalid token",
+      message: "unauthorized",
     });
 
   jwt.verify(accessToken, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       console.log("Token has expired");
-      return res.status(201).json({ success: false, message: "unauthorized" });
+      return res.status(401).json({ success: false, message: "unauthorized" });
     }
     req.user = decoded;
     next();

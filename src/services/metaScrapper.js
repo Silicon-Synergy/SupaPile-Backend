@@ -1,7 +1,7 @@
 import * as Cheerio from "cheerio";
 import axios from "axios";
 import { generateMeta } from "../utilities/generateMeta.js";
-export const metaScrapper = async (req, res) => {
+export const  metaScrapper = async (req, res) => {
   try {
     const { url } = req.query;
     const result = await generateMeta({url}) 

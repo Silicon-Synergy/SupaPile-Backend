@@ -8,6 +8,7 @@ import {
 } from "../controllers/authController.js";
 import { refreshToken } from "../controllers/TokenContoller.js";
 import jwtVerification from "../middlewares/jwtVerification.js";
+import {limiter } from "../middlewares/rateLimiter.js";
 const authRouter = express.Router();
 
 authRouter.get("/google", googleSignIn);
@@ -28,7 +29,7 @@ authRouter.get(
   }
 );
 
-authRouter.get("/me", jwtVerification, userData);
-authRouter.get("/refresh-token", refreshToken);
+authRouter.get("/me", jwtVerification,limiter, userData);
+authRouter.get("/refresh-token",limiter, refreshToken);
 
 export default authRouter;
