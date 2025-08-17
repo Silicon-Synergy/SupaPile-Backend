@@ -3,8 +3,10 @@ import Links from "../models/actionModel.js";
 import { randomUUID } from "crypto";
 import { generateMeta } from "../utilities/generateMeta.js";
 import { generatePublicToken } from "../utilities/generateTokens.js";
+import { categoriesCache, pilesCache, publicLinkCache } from "../cache/cache-with-nodeCache.js";
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
+
 export const postPile = async (req, res) => {
   try {
     let piles = req.body;
@@ -16,7 +18,7 @@ export const postPile = async (req, res) => {
     const existingPile = await Links.find({
       userId: id,
       url: { $in: URLsToCheck },
-      isArchived:true
+      isArchived: true,
     });
 
     const existingURLs = existingPile.map((pile) => pile.url);
@@ -32,6 +34,16 @@ export const postPile = async (req, res) => {
       userId: id,
       ...pileToSend,
     }));
+
+    // Clear both categories and piles cache when new items are added
+    categoriesCache.del(`categories:${id}`);
+
+    // Clear all piles cache entries for this user
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
 
     if (formatedNonExistingURLs.length === 0) {
       return res.status(409).json({
@@ -80,7 +92,16 @@ export const readPile = async (req, res) => {
   const { category = "all" } = req.params;
   let { lastId, keyword, limit = 18 } = req.query;
 
-  // const skip = (page - 1) * limit;
+  // Generate cache key based on all query parameters
+  const cacheKey = `piles:${id}:${category}:${lastId || "first"}:${
+    keyword || "no-search"
+  }:${limit}`;
+
+  // Check cache first
+  const cachedResult = pilesCache.get(cacheKey);
+  if (cachedResult) {
+    return res.status(200).json({ success: true, data: cachedResult });
+  }
 
   try {
     let piles;
@@ -88,7 +109,6 @@ export const readPile = async (req, res) => {
 
     if (lastId && mongoose.Types.ObjectId.isValid(lastId)) {
       query._id = { $lt: new mongoose.Types.ObjectId(lastId) };
-      //this will fetch id less than the previous one sent (older items)
     }
 
     if (category !== "all") {
@@ -114,7 +134,7 @@ export const readPile = async (req, res) => {
         "visibility",
         "category",
       ])
-      .sort({ _id: -1 }) // ensures result are in ascending order by creation of time
+      .sort({ _id: -1 })
       .limit(Number(limit))
       .lean();
 
@@ -126,10 +146,13 @@ export const readPile = async (req, res) => {
     if (!piles || piles.length <= 0) {
       return res.json({ message: "doesn't exist" });
     }
+
+    // Cache the result before returning
+    const result = { piles, hasMore, newLastId };
+    pilesCache.set(cacheKey, result, 300); // 5 minutes TTL
+
     console.log(piles);
-    return res
-      .status(200)
-      .json({ success: true, data: { piles, hasMore, newLastId } });
+    return res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
@@ -141,22 +164,43 @@ export const readPile = async (req, res) => {
 
 export const listOfCategories = async (req, res) => {
   const { id } = req.user;
+  const cacheKey = `categories:${id}`;
+  const cacheResult = categoriesCache.get(cacheKey);
+  if (cacheResult) {
+    return res
+      .status(200)
+      .json({ success: true, data: { categories: cacheResult } });
+  }
+
   try {
     let categories = await Links.distinct("category", {
       userId: id,
       isArchived: false,
     });
+
     categories = ["all", ...categories.filter((cat) => cat !== "all")];
+    categoriesCache.set(cacheKey, categories);
     console.log(categories);
-    return res.status(200).json({ sucess: true, data: { categories } });
+    return res.status(200).json({ success: true, data: { categories } });
   } catch (error) {
     console.log(error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch categories" });
   }
 };
 export const softDeletePile = async (req, res) => {
   try {
     const { id } = req.user;
     let [{ _id }] = req.body;
+
+    // Clear piles cache when items are archived
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+
     if (!_id) {
       return res
         .status(400)
@@ -196,7 +240,14 @@ export const softDeletePile = async (req, res) => {
 export const archivedPile = async (req, res) => {
   const { id } = req.user;
   const { lastId, limit = 18 } = req.query;
-
+  
+  // ADD: Cache key for archived piles
+  const cacheKey = `archived:${id}:${lastId || "first"}:${limit}`;
+  const cachedResult = pilesCache.get(cacheKey);
+  if (cachedResult) {
+    return res.status(200).json({ success: true, data: cachedResult });
+  }
+  
   try {
     const query = { userId: id, isArchived: true };
 
@@ -228,43 +279,64 @@ export const archivedPile = async (req, res) => {
 
 export const generatePublicLink = async (req, res) => {
   const { id } = req.user;
+  
+  // ADD: Clear existing public link cache
+  const publicCacheKeys = publicLinkCache.keys();
+  const userPublicKeys = publicCacheKeys.filter((key) =>
+    key.includes(id)
+  );
+  userPublicKeys.forEach((key) => publicLinkCache.del(key));
+  
+  const { expiryOption = "2.5min" } = req.body;
+
   const now = Date.now();
-  //60
-  const expiresAt = now + 150 * 1000; // 40 seconds from now
-  let publicLinkToken;
+  const expiryTimes = {
+    "2.5min": 150 * 1000,
+    "1hr": 60 * 60 * 1000,
+    "24hr": 24 * 60 * 60 * 1000,
+  };
+
+  const expiresAt = now + (expiryTimes[expiryOption] || expiryTimes["2.5min"]);
+
   try {
-    const existing = await Links.findOne({
+    // Check for visible piles
+    const visiblePiles = await Links.find({
       userId: id,
-      publicLinkToken: { $ne: "" },
       visibility: true,
-      expiresAt: { $gt: new Date(now) },
+      isArchived: false,
     });
 
-    if (!existing) {
-      publicLinkToken = nanoid(8);
-
-      const result = await Links.updateMany(
-        { userId: id, visibility: true },
-        {
-          $set: {
-            publicLinkToken,
-            expiresAt: new Date(expiresAt),
-          },
-        }
-      );
-
-      const link = `http://localhost:2000/api/share/${publicLinkToken}`;
-      console.log(publicLinkToken);
-      console.log(result);
-      return res.status(200).json({ success: true, data: link, expiresAt });
-    } else {
-      publicLinkToken = existing.publicLinkToken;
+    if (visiblePiles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Please make at least one pile public",
+      });
     }
 
-    // Reuse existing token
+    // ALWAYS generate new token (remove the existing check completely)
+    const publicLinkToken = nanoid(10);
+
+    // Update all visible piles with new token and expiration
+    await Links.updateMany(
+      {
+        userId: id,
+        visibility: true,
+        isArchived: false,
+      },
+      {
+        $set: {
+          publicLinkToken: publicLinkToken,
+          expiresAt: new Date(expiresAt),
+        },
+      }
+    );
+
     return res.status(200).json({
-      data: `http://localhost:2000/api/share/${existing.publicLinkToken}`,
-      existing: existing.expiresAt,
+      success: true,
+      data: `http://localhost:2000/api/share/${publicLinkToken}`,
+      expiresAt: expiresAt,
+      expiryOption: expiryOption,
+      visiblePilesCount: visiblePiles.length,
     });
   } catch (error) {
     console.log(error);
@@ -274,7 +346,13 @@ export const generatePublicLink = async (req, res) => {
 
 export const userPublicLinkList = async (req, res) => {
   const { publicLinkToken } = req.params;
-
+  
+  const cacheKey = `public:${publicLinkToken}`;
+  const cachedResult = publicLinkCache.get(cacheKey);
+  if (cachedResult) {
+    return res.status(200).json({ success: true, data: cachedResult.data, expiresAt: cachedResult.expiresAt });
+  }
+  
   try {
     const result = await Links.aggregate([
       {
@@ -306,27 +384,30 @@ export const userPublicLinkList = async (req, res) => {
         },
       },
     ]);
-    const Link = await Links.findOne({ publicLinkToken }).select([
-      "-_id",
-      "expiresAt",
-    ]);
+    const Link = await Links.findOne({ publicLinkToken }).select(["-_id", "expiresAt"]);
+    
     if (!Link) {
       return res.status(404).json({ message: "Link not found" });
     }
+    
     if (Link.expiresAt && new Date() > new Date(Link.expiresAt)) {
       return res.status(410).json({ message: "Link has expired" });
     }
-
-    console.log("i love ayotide");
-    console.log(Link);
+    
     if (!result || result.length === 0) {
       return res.status(404).json({ message: "404 not found" });
     }
 
+    // ✅ Cache BEFORE returning
+    const responseData = {
+      data: result,
+      expiresAt: Link?.expiresAt ?? null
+    };
+    publicLinkCache.set(cacheKey, responseData, 60);
+
     return res.status(200).json({
       success: true,
-      data: result,
-      expiresAt: Link?.expiresAt ?? null,
+      ...responseData
     });
   } catch (error) {
     console.log(error);
@@ -337,6 +418,14 @@ export const userPublicLinkList = async (req, res) => {
 export const restorePile = async (req, res) => {
   try {
     const { id } = req.user;
+
+    // Clear piles cache when items are restored
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+
     let { _id } = req.body;
     console.log(_id);
     if (!_id) {
@@ -369,6 +458,14 @@ export const restorePile = async (req, res) => {
 export const hardDeletePile = async (req, res) => {
   try {
     const { id } = req.user;
+    
+    // MISSING: Clear piles cache when items are permanently deleted
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+    
     let { _id } = req.body;
     console.log("hey");
     console.log(_id);
@@ -405,6 +502,15 @@ export const hardDeletePile = async (req, res) => {
 export const changeCategory = async (req, res) => {
   try {
     const { id } = req.user;
+
+    // Clear both categories and piles cache when categories change
+    categoriesCache.del(`categories:${id}`);
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+
     const result2 = req.body;
     const { category, _id } = req.body;
     console.log(result2);
@@ -462,10 +568,15 @@ export const getClickedPile = async (req, res) => {
 
 export const changeVisibility = async (req, res) => {
   const { id } = req.user;
-  const { _id } = req.body;
-  console.log("heyehey");
-  console.log(_id);
 
+  // Clear piles cache when visibility changes
+  const cacheKeys = pilesCache.keys();
+  const userPileKeys = cacheKeys.filter((key) =>
+    key.startsWith(`piles:${id}:`)
+  );
+  userPileKeys.forEach((key) => pilesCache.del(key));
+
+  const { _id } = req.body;
   if (!mongoose.Types.ObjectId.isValid(_id)) {
     return res
       .status(400)
@@ -502,5 +613,57 @@ export const changeVisibility = async (req, res) => {
     }
   } catch (error) {
     console.log(error);
+  }
+};
+
+export const getCurrentPublicLink = async (req, res) => {
+  const { id } = req.user;
+  const now = Date.now();
+  
+  // Add caching
+  const cacheKey = `current-public:${id}`;
+  const cachedResult = publicLinkCache.get(cacheKey);
+  if (cachedResult) {
+    return res.status(200).json({ success: true, data: cachedResult });
+  }
+
+  try {
+    const existing = await Links.findOne({
+      userId: id,
+      publicLinkToken: { $ne: "" },
+      visibility: true,
+      isArchived: false,
+      expiresAt: { $gt: new Date(now) },
+    });
+
+    if (!existing || !existing.publicLinkToken) {
+      return res.status(404).json({
+        success: false,
+        message: "No active public link found",
+      });
+    }
+
+    const timeLeft = new Date(existing.expiresAt) - now;
+    const minutesLeft = Math.floor(timeLeft / (1000 * 60));
+    const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+    const responseData = {
+      data: `http://localhost:2000/api/share/${existing.publicLinkToken}`,
+      expiresAt: existing.expiresAt,
+      timeLeft: {
+        minutes: minutesLeft,
+        seconds: secondsLeft,
+        total: timeLeft,
+      },
+      message: `Link expires in ${minutesLeft}m ${secondsLeft}s`,
+    };
+    
+    // Cache with shorter TTL since it has time-sensitive data
+    publicLinkCache.set(cacheKey, responseData, 30);
+
+    return res.status(200).json({ success: true, ...responseData });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };

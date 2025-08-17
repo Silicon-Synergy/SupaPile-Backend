@@ -1,15 +1,20 @@
 import axios from "axios";
 import * as Cheerio from "cheerio";
-
+import { metaCache } from "../cache/cache-with-nodeCache.js";
 
 export const generateMeta = async (theObject) => {
   const decodedUrl = decodeURIComponent(theObject.url);
+  const cacheKey = `meta:${decodedUrl}`;
+  const cacheResult = metaCache.get(cacheKey);
+
+  if (cacheResult) {
+    return { ...cacheResult, id: theObject.id };
+  }
+
+  // fallback to Cheerio scraping
   const domain1 = new URL(decodedUrl).hostname.split(".")[0];
   const domain2 = new URL(decodedUrl).hostname;
 
-  console.log("checking something out");
-  console.log(domain1);
-  // fallback to Cheerio scraping
   try {
     const response = await axios.get(decodedUrl, {
       headers: {
@@ -29,15 +34,22 @@ export const generateMeta = async (theObject) => {
       title = domain1;
       description = domain2;
     }
-    const result = { title, description, image, id: theObject.id };
+    const metaData = { title, description, image };
+    const result = { ...metaData, id: theObject.id };
+    metaCache.set(cacheKey, result);
     return result;
   } catch (error) {
-    const result = {
+    const fallback = {
       title: domain1,
       description: `from ${domain2}`,
       image: "",
+    };
+
+    const result = {
+      ...fallback,
       id: theObject.id,
     };
+    metaCache.set(cacheKey, fallback, 3600);
     return result;
   }
 };

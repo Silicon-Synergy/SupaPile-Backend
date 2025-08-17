@@ -23,13 +23,16 @@ const server = createServer(app);
 // const whiteList = ["https://supapile-backend.up.railway.app"];
 // Rate limiter (15 minutes)
 
-
-
 // Middlewares
 // app.use(limiter);
 
 app.use(helmet());
-const allowedOrigins = ["http://localhost:2000", "http://192.168.0.3:2000"];
+const allowedOrigins = [
+  "http://localhost:2000",
+  "http://192.168.0.3:2000",
+  "http://localhost:2025",
+  "chrome-extension://eiplichdddgjajjklpchhilebianmdei",
+];
 
 app.use(
   cors({
