@@ -13,16 +13,19 @@ export const googleSignInCallback = (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Authentication failure" });
     }
-    
+
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
     const isProduction = process.env.NODE_ENV === "production";
 
+    console.log(isProduction);
+    console.log("hey there");
+
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "Lax",
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
       path: "/",
       maxAge: 15 * 60 * 1000,
     });
@@ -30,13 +33,17 @@ export const googleSignInCallback = (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: "Lax",
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    
-    // Use your Vercel frontend URL
-    res.redirect("https://super-pile-frontend.vercel.app");
+
+    if (isProduction) {
+      res.redirect("https://super-pile-frontend.vercel.app");
+    } else {
+      res.redirect("http://localhost:2000");
+    }
+
   } catch (error) {
     console.log(error);
   }
@@ -90,14 +97,14 @@ export const logOut = async (req, res) => {
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax", // Changed from "strict" to "Lax" to match auth callback
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
       path: "/",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax", // Changed from "strict" to "Lax" to match auth callback
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
       path: "/",
     });
 
