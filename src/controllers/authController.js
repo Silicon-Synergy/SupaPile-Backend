@@ -27,7 +27,7 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: isProduction,
+      secure: true,
       sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
       path: "/",
       maxAge: 15 * 60 * 1000,
@@ -35,7 +35,7 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction,
+      secure: true,
       sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
