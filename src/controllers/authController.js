@@ -17,27 +17,27 @@ export const googleSignInCallback = (req, res) => {
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
+    console.log("accessToken", accessToken, refreshToken);
+    console.log("olamide")
+    
     const isProduction = process.env.NODE_ENV === "production";
 
     console.log(isProduction);
     console.log("hey there");
 
-    // Cookie configuration for production
-    const cookieConfig = {
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
       path: "/",
-      ...(isProduction && { domain: ".railway.app" }), // Add domain for Railway
-    };
-
-    res.cookie("accessToken", accessToken, {
-      ...cookieConfig,
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
-      ...cookieConfig,
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -96,19 +96,20 @@ export const userData = async (req, res) => {
 
 export const logOut = async (req, res) => {
   try {
-    const isProduction = process.env.NODE_ENV === "production";
-    
-    // Clear cookies with same configuration as when they were set
-    const clearConfig = {
+    // Clear cookies
+    res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
       path: "/",
-      ...(isProduction && { domain: ".railway.app" }),
-    };
+    });
 
-    res.clearCookie("accessToken", clearConfig);
-    res.clearCookie("refreshToken", clearConfig);
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      path: "/",
+    });
 
     // Clear user cache
     if (req.user && req.user.id) {
