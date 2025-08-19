@@ -13,18 +13,15 @@ export const googleSignInCallback = (req, res) => {
     if (!req.user) {
       return res.status(401).json({ error: "Authentication failure" });
     }
-    console.log(req.user._id);
+    
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshAcessToken(req.user._id);
-    console.log(accessToken);
-    console.log(refreshToken);
 
     const isProduction = process.env.NODE_ENV === "production";
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      // secure: isProduction, // Set to true in production, false in development (localhost)
-      secure: false,
+      secure: isProduction,
       sameSite: "Lax",
       path: "/",
       maxAge: 15 * 60 * 1000,
@@ -32,16 +29,14 @@ export const googleSignInCallback = (req, res) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      // secure: isProduction, // Same here
-      secure: false,
+      secure: isProduction,
       sameSite: "Lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    console.log("Test Headers:", res.getHeaders());
-    // res.send("Cookies set, check DevTools");
-    //i need to replace with the actual website domain
-    res.redirect("http://localhost:2000");
+    
+    // Use your Vercel frontend URL
+    res.redirect("https://super-pile-frontend.vercel.app");
   } catch (error) {
     console.log(error);
   }
@@ -94,14 +89,14 @@ export const logOut = async (req, res) => {
     // Clear cookies
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "prduction",
+      secure: process.env.NODE_ENV === "production", // Fixed typo
       sameSite: "strict",
       path: "/",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "prduction",
+      secure: process.env.NODE_ENV === "production", // Fixed typo
       sameSite: "strict",
       path: "/",
     });
