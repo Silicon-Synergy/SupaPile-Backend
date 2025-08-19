@@ -22,19 +22,22 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    res.cookie("accessToken", accessToken, {
+    // Cookie configuration for production
+    const cookieConfig = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      sameSite: isProduction ? "None" : "Lax",
       path: "/",
+      ...(isProduction && { domain: ".railway.app" }), // Add domain for Railway
+    };
+
+    res.cookie("accessToken", accessToken, {
+      ...cookieConfig,
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-      path: "/",
+      ...cookieConfig,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -93,20 +96,19 @@ export const userData = async (req, res) => {
 
 export const logOut = async (req, res) => {
   try {
-    // Clear cookies
-    res.clearCookie("accessToken", {
+    const isProduction = process.env.NODE_ENV === "production";
+    
+    // Clear cookies with same configuration as when they were set
+    const clearConfig = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
       path: "/",
-    });
+      ...(isProduction && { domain: ".railway.app" }),
+    };
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
-      path: "/",
-    });
+    res.clearCookie("accessToken", clearConfig);
+    res.clearCookie("refreshToken", clearConfig);
 
     // Clear user cache
     if (req.user && req.user.id) {

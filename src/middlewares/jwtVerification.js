@@ -1,7 +1,15 @@
 import jwt from "jsonwebtoken";
 
 const jwtVerification = (req, res, next) => {
-  console.log("Cookies received:", req.cookies);
+  // Enhanced debugging for production
+  console.log("=== Cookie Debug Info ===");
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Raw cookies header:", req.headers.cookie);
+  console.log("Parsed cookies:", req.cookies);
+  console.log("Signed cookies:", req.signedCookies);
+  console.log("Environment:", process.env.NODE_ENV);
+  console.log("========================");
+  
   const { accessToken } = req.cookies;
   
   if (!accessToken) {

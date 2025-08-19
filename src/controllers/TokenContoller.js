@@ -3,25 +3,35 @@ import { generateAccessToken } from "../utilities/generateTokens.js";
 
 export const refreshToken = async (req, res) => {
   const { refreshToken } = req.cookies;
-  console.log(req.cookies)
+  console.log("All cookies:", req.cookies);
+  console.log("Refresh token:", refreshToken);
+  
   if (!refreshToken) {
     return res.status(404).json({ message: "no token provided" });
   }
+  
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
     console.log(decoded);
+    
     if (!decoded) {
       return res.status(200).json({ message: "unAuthorized" });
     }
-    const accesToken = generateAccessToken(decoded.id);
-    console.log(accesToken);
-    res.cookie("accessToken", accesToken, {
+    
+    const accessToken = generateAccessToken(decoded.id);
+    console.log(accessToken);
+    
+    const isProduction = process.env.NODE_ENV === "production";
+    
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Fixed typo: "prduction" -> "production"
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Changed to match other cookie settings
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      path: "/",
+      maxAge: 15 * 60 * 1000,
+      ...(isProduction && { domain: ".railway.app" }),
     });
     
-    // Add missing response
     return res.status(200).json({ 
       success: true, 
       message: "Token refreshed successfully" 

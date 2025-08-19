@@ -26,8 +26,6 @@ const server = createServer(app);
 // Middlewares
 // app.use(limiter);
 
-app.use(helmet());
-
 const allowedOrigins = [
   "http://localhost:2000",
   "http://192.168.0.3:2000",
@@ -39,6 +37,16 @@ const allowedOrigins = [
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
+
+// IMPORTANT: Apply cookie-parser BEFORE helmet and other middleware
+app.use(cookieParser());
+app.use(express.json());
+
+// Configure helmet to not interfere with cookies
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false, // Disable CSP if it's causing issues
+}));
 
 app.use(
   cors({
@@ -55,6 +63,7 @@ app.use(
     exposedHeaders: ['set-cookie'],
   })
 );
+
 export const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -62,8 +71,7 @@ export const io = new Server(server, {
     optionsSuccessStatus: 200,
   },
 });
-app.use(cookieParser());
-app.use(express.json());
+
 app.use(passport.initialize());
 
 // Routes
