@@ -15,47 +15,45 @@ import metaScrapperRouter from "./src/router/serviceRoute.js";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 
-//variable initialization
 const PORT = process.env.PORT || 5000;
 const app = express();
 const server = createServer(app);
 
-// const whiteList = ["https://supapile-backend.up.railway.app"];
-// Rate limiter (15 minutes)
-
-// Middlewares
-// app.use(limiter);
-
-app.use(helmet());
+// CORS configuration - MUST be before other middleware
 const allowedOrigins = [
   "http://localhost:2000",
-  "http://192.168.0.3:2000",
+  "http://192.168.0.3:2000", 
   "http://localhost:2025",
   "https://super-pile-frontend.vercel.app",
-  "https://supapile-backend.up.railway.app", // Add this if needed
   "chrome-extension://eiplichdddgjajjklpchhilebianmdei",
 ];
 
+// Apply CORS first, before helmet
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+      
+      console.log('CORS blocked origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     optionsSuccessStatus: 200,
   })
 );
-export const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    credentials: true,
-    optionsSuccessStatus: 200,
-  },
-});
+
+// Apply helmet after CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(passport.initialize());
