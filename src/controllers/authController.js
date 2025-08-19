@@ -30,7 +30,7 @@ export const googleSignInCallback = (req, res) => {
       secure: true,
       sameSite: "none", // Changed for cross-domain
       path: "/",
-      domain: "/.railway.app",
+      domain: ".railway.app",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -39,7 +39,7 @@ export const googleSignInCallback = (req, res) => {
       secure: true,
       sameSite: "none", // Changed for cross-domain
       path: "/",
-      domain: "/.railway.app",
+      domain: ".railway.app",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
