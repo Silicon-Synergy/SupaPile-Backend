@@ -60,9 +60,9 @@ app.use(passport.initialize());
 
 // Routes
 app.use("/auth", authRouter);
-app.use("/api", actionRouter);
+app.use("/api/v1", actionRouter);
 app.use(shareRouter);
-app.use(metaScrapperRouter);
+app.use("/api/v1/services", metaScrapperRouter);
 
 // integrating socket io
 io.on("connection", (socket) => {

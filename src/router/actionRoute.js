@@ -6,36 +6,50 @@ import {
   readPile,
   softDeletePile,
   generatePublicLink,
-  getCurrentPublicLink, // Add this
+  getCurrentPublicLink,
   restorePile,
   hardDeletePile,
   changeCategory,
   listOfCategories,
   getClickedPile,
   changeVisibility,
+  magicSave, // Add this import
 } from "../controllers/actionController.js";
 import { limiter } from "../middlewares/rateLimiter.js";
 import { getCacheStats } from "../cache/cache-with-nodeCache.js";
+
 const actionRouter = Router();
 
-actionRouter.post("/post-pile", jwtVerification, postPile);
-actionRouter.get("/read-pile/:category", jwtVerification, readPile);
-actionRouter.put("/soft-delete-pile", jwtVerification, softDeletePile);
-actionRouter.get("/archived-pile", jwtVerification, archivedPile);
-actionRouter.post(
-  "/generate-public-link",
-  jwtVerification,
-  limiter,
-  generatePublicLink
-);
-actionRouter.put("/restore-pile", jwtVerification, restorePile);
-actionRouter.put("/hard-delete-pile", jwtVerification, hardDeletePile);
-actionRouter.post("/change-pile-category", jwtVerification, changeCategory);
-actionRouter.get("/list-of-category", jwtVerification, listOfCategories);
-actionRouter.post("/get-clicked-pile", jwtVerification, getClickedPile);
-actionRouter.put("/change-visibility", jwtVerification, changeVisibility);
+// ===== PILE RESOURCE ROUTES =====
+// Collection routes (operate on multiple resources)
+actionRouter.post("/piles", jwtVerification, postPile);                    // Create pile
+actionRouter.get("/piles", jwtVerification, readPile);                     // Get all piles (with category query param)
 
-actionRouter.get("/cache-stats", (req, res) => {
+// Specific collection endpoints (before parameterized routes)
+actionRouter.get("/piles/archived", jwtVerification, archivedPile);        // Get archived piles
+actionRouter.get("/piles/categories", jwtVerification, listOfCategories);  // Get all categories
+
+// Individual resource routes (operate on single resources)
+actionRouter.get("/piles/:id", jwtVerification, getClickedPile);           // Get specific pile
+actionRouter.patch("/piles/:id", jwtVerification, changeCategory);         // Update pile (category)
+actionRouter.delete("/piles/:id", jwtVerification, softDeletePile);        // Soft delete pile
+
+// ===== PILE SUB-RESOURCE ROUTES =====
+// Pile visibility management
+actionRouter.patch("/piles/:id/visibility", jwtVerification, changeVisibility);
+
+// Pile lifecycle management
+actionRouter.patch("/piles/:id/restore", jwtVerification, restorePile);    // Restore soft-deleted pile
+actionRouter.delete("/piles/:id/permanent", jwtVerification, hardDeletePile); // Permanent delete
+
+// ===== PUBLIC LINK RESOURCE ROUTES =====
+// Public link management as separate resource
+actionRouter.get("/public-links", jwtVerification, getCurrentPublicLink);   // Get current public link
+actionRouter.post("/public-links", jwtVerification, limiter, generatePublicLink); // Generate new public link
+
+// ===== SYSTEM RESOURCE ROUTES =====
+// Cache management
+actionRouter.get("/cache/stats", (req, res) => {
   const stats = getCacheStats();
   res.json({
     success: true,
@@ -43,6 +57,8 @@ actionRouter.get("/cache-stats", (req, res) => {
     data: stats,
   });
 });
-// Add this new route
-actionRouter.get("/current-public-link", jwtVerification, getCurrentPublicLink);
+
+// Add this route before the parameterized routes
+actionRouter.get("/magic-save/*", jwtVerification, magicSave);
+
 export default actionRouter;

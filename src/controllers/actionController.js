@@ -3,7 +3,11 @@ import Links from "../models/actionModel.js";
 import { randomUUID } from "crypto";
 import { generateMeta } from "../utilities/generateMeta.js";
 import { generatePublicToken } from "../utilities/generateTokens.js";
-import { categoriesCache, pilesCache, publicLinkCache } from "../cache/cache-with-nodeCache.js";
+import {
+  categoriesCache,
+  pilesCache,
+  publicLinkCache,
+} from "../cache/cache-with-nodeCache.js";
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
 
@@ -87,10 +91,93 @@ export const postPile = async (req, res) => {
   }
 };
 
+export const magicSave = async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url);
+    const { id } = req.user;
+
+    // Validate URL is HTTPS only
+    if (!url.startsWith("https://")) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Only secure HTTPS URLs are allowed. HTTP URLs are not permitted for security reasons.",
+        url: url,
+      });
+    }
+
+    // Check if URL already exists
+    const existingPile = await Links.findOne({
+      userId: id,
+      url: url,
+      isArchived: true,
+    });
+
+    if (existingPile) {
+      return res.status(409).json({
+        success: false,
+        message: "This link already exists in your pile.",
+        url: url,
+      });
+    }
+
+    // Create new pile object
+    const newPile = {
+      userId: id,
+      url: url,
+      category: "Uncategorized", // default category
+    };
+
+    // Clear cache
+    categoriesCache.del(`categories:${id}`);
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+
+    // Insert the new link
+    const insertedLink = await Links.create(newPile);
+
+    // Generate metadata in background
+    try {
+      const meta = await generateMeta({
+        url: insertedLink.url,
+        id: insertedLink._id,
+      });
+      await Links.updateOne(
+        { _id: insertedLink._id },
+        {
+          $set: {
+            image: meta.image,
+            title: meta.title,
+            description: meta.description,
+          },
+        }
+      );
+    } catch (err) {
+      console.log("Meta generation failed for:", insertedLink.url, err);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Secure link saved successfully!",
+      url: url,
+      id: insertedLink._id,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save link",
+      error: error.message,
+    });
+  }
+};
+
 export const readPile = async (req, res) => {
   const { id } = req.user;
-  const { category = "all" } = req.params;
-  let { lastId, keyword, limit = 18 } = req.query;
+  let { category = "all", lastId, keyword, limit = 18 } = req.query;
 
   // Generate cache key based on all query parameters
   const cacheKey = `piles:${id}:${category}:${lastId || "first"}:${
@@ -192,7 +279,7 @@ export const listOfCategories = async (req, res) => {
 export const softDeletePile = async (req, res) => {
   try {
     const { id } = req.user;
-    let [{ _id }] = req.body;
+    let { id: _id } = req.params;
 
     // Clear piles cache when items are archived
     const cacheKeys = pilesCache.keys();
@@ -206,13 +293,23 @@ export const softDeletePile = async (req, res) => {
         .status(400)
         .json({ message: "Invalid Request, Id is required" });
     }
+
+    // ✅ Add ObjectId validation
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res;
+      console.log("something went wrong");
+    }
+
     let linkId = _id;
     if (!Array.isArray(linkId)) {
       linkId = [linkId];
     }
+
+    // ✅ Now safe to create ObjectId
     const objectId = linkId.map((link) => {
       return new mongoose.Types.ObjectId(link);
     });
+
     const isArchivedCheck = await Links.find({ userId: id, _id: objectId })
       .select(["isArchived"])
       .lean();
@@ -240,14 +337,14 @@ export const softDeletePile = async (req, res) => {
 export const archivedPile = async (req, res) => {
   const { id } = req.user;
   const { lastId, limit = 18 } = req.query;
-  
+
   // ADD: Cache key for archived piles
   const cacheKey = `archived:${id}:${lastId || "first"}:${limit}`;
   const cachedResult = pilesCache.get(cacheKey);
   if (cachedResult) {
     return res.status(200).json({ success: true, data: cachedResult });
   }
-  
+
   try {
     const query = { userId: id, isArchived: true };
 
@@ -279,14 +376,12 @@ export const archivedPile = async (req, res) => {
 
 export const generatePublicLink = async (req, res) => {
   const { id } = req.user;
-  
+
   // ADD: Clear existing public link cache
   const publicCacheKeys = publicLinkCache.keys();
-  const userPublicKeys = publicCacheKeys.filter((key) =>
-    key.includes(id)
-  );
+  const userPublicKeys = publicCacheKeys.filter((key) => key.includes(id));
   userPublicKeys.forEach((key) => publicLinkCache.del(key));
-  
+
   const { expiryOption = "2.5min" } = req.body;
 
   const now = Date.now();
@@ -346,13 +441,17 @@ export const generatePublicLink = async (req, res) => {
 
 export const userPublicLinkList = async (req, res) => {
   const { publicLinkToken } = req.params;
-  
+
   const cacheKey = `public:${publicLinkToken}`;
   const cachedResult = publicLinkCache.get(cacheKey);
   if (cachedResult) {
-    return res.status(200).json({ success: true, data: cachedResult.data, expiresAt: cachedResult.expiresAt });
+    return res.status(200).json({
+      success: true,
+      data: cachedResult.data,
+      expiresAt: cachedResult.expiresAt,
+    });
   }
-  
+
   try {
     const result = await Links.aggregate([
       {
@@ -384,16 +483,19 @@ export const userPublicLinkList = async (req, res) => {
         },
       },
     ]);
-    const Link = await Links.findOne({ publicLinkToken }).select(["-_id", "expiresAt"]);
-    
+    const Link = await Links.findOne({ publicLinkToken }).select([
+      "-_id",
+      "expiresAt",
+    ]);
+
     if (!Link) {
       return res.status(404).json({ message: "Link not found" });
     }
-    
+
     if (Link.expiresAt && new Date() > new Date(Link.expiresAt)) {
       return res.status(410).json({ message: "Link has expired" });
     }
-    
+
     if (!result || result.length === 0) {
       return res.status(404).json({ message: "404 not found" });
     }
@@ -401,13 +503,13 @@ export const userPublicLinkList = async (req, res) => {
     // ✅ Cache BEFORE returning
     const responseData = {
       data: result,
-      expiresAt: Link?.expiresAt ?? null
+      expiresAt: Link?.expiresAt ?? null,
     };
     publicLinkCache.set(cacheKey, responseData, 60);
 
     return res.status(200).json({
       success: true,
-      ...responseData
+      ...responseData,
     });
   } catch (error) {
     console.log(error);
@@ -426,7 +528,7 @@ export const restorePile = async (req, res) => {
     );
     userPileKeys.forEach((key) => pilesCache.del(key));
 
-    let { _id } = req.body;
+    let { id: _id } = req.params;
     console.log(_id);
     if (!_id) {
       return res
@@ -458,15 +560,15 @@ export const restorePile = async (req, res) => {
 export const hardDeletePile = async (req, res) => {
   try {
     const { id } = req.user;
-    
+
     // MISSING: Clear piles cache when items are permanently deleted
     const cacheKeys = pilesCache.keys();
     const userPileKeys = cacheKeys.filter((key) =>
       key.startsWith(`piles:${id}:`)
     );
     userPileKeys.forEach((key) => pilesCache.del(key));
-    
-    let { _id } = req.body;
+
+    let { id: _id } = req.params;
     console.log("hey");
     console.log(_id);
     if (!_id) {
@@ -511,10 +613,11 @@ export const changeCategory = async (req, res) => {
     );
     userPileKeys.forEach((key) => pilesCache.del(key));
 
-    const result2 = req.body;
-    const { category, _id } = req.body;
-    console.log(result2);
+    const { id: _id } = req.params;
+    const { category } = req.body;
     console.log(_id);
+    console.log("hey");
+    console.log(category);
     // if (Array.isArray(_id)) {
     //   throw new TypeError("Expected item to be an object.");
     // }
@@ -540,15 +643,14 @@ export const changeCategory = async (req, res) => {
 };
 
 export const getClickedPile = async (req, res) => {
-  const { id } = req.user;
-  console.log(id);
-  const pile = req.body;
-  console.log(pile);
-  // console.log(pile)
+  const { id: userId } = req.user;
+  const { id: _id } = req.params; // Extract 'id' from route params
+
   try {
     const result = await Links.find({
-      userId: id,
-      ...pile,
+      userId,
+      _id: new mongoose.Types.ObjectId(_id), // Convert to ObjectId
+      // Remove category requirement or make it optional
     }).select([
       "_id",
       "url",
@@ -563,6 +665,7 @@ export const getClickedPile = async (req, res) => {
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.log(error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -576,7 +679,7 @@ export const changeVisibility = async (req, res) => {
   );
   userPileKeys.forEach((key) => pilesCache.del(key));
 
-  const { _id } = req.body;
+  const { id: _id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(_id)) {
     return res
       .status(400)
@@ -619,12 +722,14 @@ export const changeVisibility = async (req, res) => {
 export const getCurrentPublicLink = async (req, res) => {
   const { id } = req.user;
   const now = Date.now();
-  
+
   // Add caching
   const cacheKey = `current-public:${id}`;
   const cachedResult = publicLinkCache.get(cacheKey);
+  console.log("babies are trying to kill themselves all the time");
+  console.log(cachedResult);
   if (cachedResult) {
-    return res.status(200).json({ success: true, data: cachedResult });
+    return res.status(200).json({ success: true, ...cachedResult });
   }
 
   try {
@@ -657,7 +762,7 @@ export const getCurrentPublicLink = async (req, res) => {
       },
       message: `Link expires in ${minutesLeft}m ${secondsLeft}s`,
     };
-    
+
     // Cache with shorter TTL since it has time-sensitive data
     publicLinkCache.set(cacheKey, responseData, 30);
 

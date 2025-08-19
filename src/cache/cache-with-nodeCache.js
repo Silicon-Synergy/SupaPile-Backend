@@ -1,8 +1,8 @@
 import NodeCache from "node-cache";
 
 export const metaCache = new NodeCache({
-  stdTTL: 86400,
-  checkperiod: 3600,
+  stdTTL: 300,
+  checkperiod: 60,
 });
 
 export const userCache = new NodeCache({

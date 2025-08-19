@@ -30,7 +30,7 @@ authRouter.get(
   }
 );
 
-authRouter.get("/me", jwtVerification, limiter, userData);
+authRouter.get("/user", jwtVerification, limiter, userData);
 authRouter.get("/refresh-token", limiter, refreshToken);
 authRouter.get("/logout", limiter, logOut);
 
