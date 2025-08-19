@@ -18,7 +18,7 @@ export const refreshToken = async (req, res) => {
     res.cookie("accessToken", accesToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // Fixed typo: "prduction" -> "production"
-      sameSite: "Lax", // Changed to match other cookie settings
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Changed to match other cookie settings
     });
     
     // Add missing response
