@@ -18,8 +18,8 @@ export const googleSignInCallback = (req, res) => {
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
     console.log("accessToken", accessToken, refreshToken);
-    console.log("olamide")
-    
+    console.log("olamide");
+
     const isProduction = process.env.NODE_ENV === "production";
 
     console.log(isProduction);
@@ -28,16 +28,18 @@ export const googleSignInCallback = (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "none",  // Changed for cross-domain
+      sameSite: "none", // Changed for cross-domain
       path: "/",
+      domain: "/.railway.app",
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite:"none",// Changed for cross-domain
+      sameSite: "none", // Changed for cross-domain
       path: "/",
+      domain: "/.railway.app",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -46,7 +48,6 @@ export const googleSignInCallback = (req, res) => {
     } else {
       res.redirect("http://localhost:2000");
     }
-
   } catch (error) {
     console.log(error);
   }
@@ -99,16 +100,18 @@ export const logOut = async (req, res) => {
     // Clear cookies
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      secure: true,
+      sameSite: "none", // Updated
       path: "/",
+      domain: ".railway.app",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      secure: true,
+      sameSite: "none", // Updated
       path: "/",
+      domain:".railway.app"
     });
 
     // Clear user cache
