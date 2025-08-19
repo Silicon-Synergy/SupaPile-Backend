@@ -51,6 +51,8 @@ app.use(
     },
     credentials: true,
     optionsSuccessStatus: 200,
+    // Add explicit cookie handling
+    exposedHeaders: ['set-cookie'],
   })
 );
 export const io = new Server(server, {

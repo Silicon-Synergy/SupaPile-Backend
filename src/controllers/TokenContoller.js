@@ -17,13 +17,20 @@ export const refreshToken = async (req, res) => {
     console.log(accesToken);
     res.cookie("accessToken", accesToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "prduction",
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // Fixed typo: "prduction" -> "production"
+      sameSite: "Lax", // Changed to match other cookie settings
+    });
+    
+    // Add missing response
+    return res.status(200).json({ 
+      success: true, 
+      message: "Token refreshed successfully" 
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(403).json({ message: "Token Expired" });
     }
     console.log(error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -89,15 +89,15 @@ export const logOut = async (req, res) => {
     // Clear cookies
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Fixed typo
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Lax", // Changed from "strict" to "Lax" to match auth callback
       path: "/",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Fixed typo
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Lax", // Changed from "strict" to "Lax" to match auth callback
       path: "/",
     });
 
