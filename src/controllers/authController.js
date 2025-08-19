@@ -18,35 +18,59 @@ export const googleSignInCallback = (req, res) => {
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
     console.log("accessToken", accessToken, refreshToken);
-    console.log("olamide")
-    
+    console.log("olamide");
+
     const isProduction = process.env.NODE_ENV === "production";
 
     console.log(isProduction);
     console.log("hey there");
 
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
+    // res.cookie("accessToken", accessToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+    //   path: "/",
+    //   maxAge: 15 * 60 * 1000,
+    // });
+    res.setHeader(
+      "Set-Cookie",
+      cookie.serialize("accessToken", YOUR_OBJECT, {
+        // XSRF-TOKEN is the name of your cookie
+        sameSite: "lax", // lax is important, don't use 'strict' or 'none'
+        httpOnly: true, // must be true in production
+        path: "/",
+        secure: true, // must be true in production
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: `.railway.app`, // the period before is important and intentional
+      })
+    );
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-      path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.setHeader(
+      "Set-Cookie",
+      cookie.serialize("refreshToken", YOUR_OBJECT, {
+        // XSRF-TOKEN is the name of your cookie
+        sameSite: "lax", // lax is important, don't use 'strict' or 'none'
+        httpOnly: true, // must be true in production
+        path: "/",
+        secure: true, // must be true in production
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        domain: `.railway.app`, // the period before is important and intentional
+      })
+    );
+
+    // res.cookie("refreshToken", refreshToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+    //   path: "/",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
 
     if (isProduction) {
       res.redirect("https://super-pile-frontend.vercel.app");
     } else {
       res.redirect("http://localhost:2000");
     }
-
   } catch (error) {
     console.log(error);
   }
@@ -108,7 +132,7 @@ export const logOut = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
-      path: "/"
+      path: "/",
     });
 
     // Clear user cache
