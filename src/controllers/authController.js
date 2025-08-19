@@ -111,7 +111,7 @@ export const logOut = async (req, res) => {
       secure: true,
       sameSite: "none", // Updated
       path: "/",
-      domain:".railway.app"
+      domain: ".railway.app" // Fixed: added missing space
     });
 
     // Clear user cache
