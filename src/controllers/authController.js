@@ -40,7 +40,7 @@ export const googleSignInCallback = (req, res) => {
         sameSite: "none", // allow cross-site cookies
         path: "/",
         maxAge: 7 * 24 * 60 * 60, // seconds
-        domain: "super-pile-frontend.vercel.app", // 👈 match your frontend domain
+        // Remove domain attribute - let browser handle it
       })
     );
 
@@ -52,7 +52,7 @@ export const googleSignInCallback = (req, res) => {
         sameSite: "none",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
-        domain: "super-pile-frontend.vercel.app", // 👈
+        // Remove domain attribute
       })
     );
     // res.cookie("refreshToken", refreshToken, {
