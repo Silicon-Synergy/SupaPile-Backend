@@ -32,33 +32,29 @@ export const googleSignInCallback = (req, res) => {
     //   sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
     //   path: "/",
     //   maxAge: 15 * 60 * 1000,
-    // });
     res.setHeader(
       "Set-Cookie",
       cookie.serialize("accessToken", accessToken, {
-        // XSRF-TOKEN is the name of your cookie
-        sameSite: "lax", // lax is important, don't use 'strict' or 'none'
-        httpOnly: true, // must be true in production
+        httpOnly: true,
+        secure: true,
+        sameSite: "none", // allow cross-site cookies
         path: "/",
-        secure: true, // must be true in production
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: `.railway.app`, // the period before is important and intentional
+        maxAge: 7 * 24 * 60 * 60, // seconds
+        domain: "super-pile-frontend.vercel.app", // 👈 match your frontend domain
       })
     );
 
     res.setHeader(
       "Set-Cookie",
       cookie.serialize("refreshToken", refreshToken, {
-        // XSRF-TOKEN is the name of your cookie
-        sameSite: "lax", // lax is important, don't use 'strict' or 'none'
-        httpOnly: true, // must be true in production
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
         path: "/",
-        secure: true, // must be true in production
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        domain: `.railway.app`, // the period before is important and intentional
+        maxAge: 7 * 24 * 60 * 60,
+        domain: "super-pile-frontend.vercel.app", // 👈
       })
     );
-
     // res.cookie("refreshToken", refreshToken, {
     //   httpOnly: true,
     //   secure: true,
