@@ -26,21 +26,21 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    // Set multiple cookies using an array - this is the key fix!
+    // Fixed cookie configuration
     res.setHeader("Set-Cookie", [
       cookie.serialize("accessToken", accessToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: isProduction, // Only secure in production
+        sameSite: isProduction ? "none" : "lax", // Different sameSite for dev/prod
         path: "/",
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds, not seconds
       }),
       cookie.serialize("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: isProduction, // Only secure in production
+        sameSite: isProduction ? "none" : "lax", // Different sameSite for dev/prod
         path: "/",
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds, not seconds
       })
     ]);
 
