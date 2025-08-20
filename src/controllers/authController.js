@@ -26,30 +26,23 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    // Remove domain attribute - this is the key fix
-    res.setHeader(
-      "Set-Cookie",
+    // Set multiple cookies using an array - this is the key fix!
+    res.setHeader("Set-Cookie", [
       cookie.serialize("accessToken", accessToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none", // allow cross-site cookies
+        sameSite: "none",
         path: "/",
-        maxAge: 7 * 24 * 60 * 60, // seconds
-        // domain removed - let browser handle it automatically
-      })
-    );
-
-    res.setHeader(
-      "Set-Cookie",
+        maxAge: 7 * 24 * 60 * 60,
+      }),
       cookie.serialize("refreshToken", refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
-        // domain removed
       })
-    );
+    ]);
 
     if (isProduction) {
       res.redirect("https://super-pile-frontend.vercel.app");
