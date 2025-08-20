@@ -26,12 +26,7 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    // res.cookie("accessToken", accessToken, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-    //   path: "/",
-    //   maxAge: 15 * 60 * 1000,
+    // Remove domain attribute - this is the key fix
     res.setHeader(
       "Set-Cookie",
       cookie.serialize("accessToken", accessToken, {
@@ -40,7 +35,7 @@ export const googleSignInCallback = (req, res) => {
         sameSite: "none", // allow cross-site cookies
         path: "/",
         maxAge: 7 * 24 * 60 * 60, // seconds
-        // Remove domain attribute - let browser handle it
+        // domain removed - let browser handle it automatically
       })
     );
 
@@ -52,16 +47,9 @@ export const googleSignInCallback = (req, res) => {
         sameSite: "none",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
-        // Remove domain attribute
+        // domain removed
       })
     );
-    // res.cookie("refreshToken", refreshToken, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-    //   path: "/",
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
 
     if (isProduction) {
       res.redirect("https://super-pile-frontend.vercel.app");
