@@ -35,7 +35,7 @@ export const googleSignInCallback = (req, res) => {
     // });
     res.setHeader(
       "Set-Cookie",
-      cookie.serialize("accessToken", YOUR_OBJECT, {
+      cookie.serialize("accessToken", accessToken, {
         // XSRF-TOKEN is the name of your cookie
         sameSite: "lax", // lax is important, don't use 'strict' or 'none'
         httpOnly: true, // must be true in production
@@ -48,7 +48,7 @@ export const googleSignInCallback = (req, res) => {
 
     res.setHeader(
       "Set-Cookie",
-      cookie.serialize("refreshToken", YOUR_OBJECT, {
+      cookie.serialize("refreshToken", refreshToken, {
         // XSRF-TOKEN is the name of your cookie
         sameSite: "lax", // lax is important, don't use 'strict' or 'none'
         httpOnly: true, // must be true in production
