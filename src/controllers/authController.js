@@ -18,31 +18,24 @@ export const googleSignInCallback = (req, res) => {
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
-    console.log("accessToken", accessToken, refreshToken);
-    console.log("olamide");
-
     const isProduction = process.env.NODE_ENV === "production";
 
     console.log(isProduction);
-    console.log("hey there");
+    // cole.log("hey there");
 
-    // Fixed cookie configuration
-    res.setHeader("Set-Cookie", [
-      cookie.serialize("accessToken", accessToken, {
-        httpOnly: true,
-        secure: isProduction, // Only secure in production
-        sameSite: isProduction ? "none" : "lax", // Different sameSite for dev/prod
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds, not seconds
-      }),
-      cookie.serialize("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: isProduction, // Only secure in production
-        sameSite: isProduction ? "none" : "lax", // Different sameSite for dev/prod
-        path: "/",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds, not seconds
-      })
-    ]);
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: isProduction ? "None" : "Lax", // nged for cross-don
+      path: "/", });
+
+     res.cookie("refreshToken", refreshToken, {
+       httpOnly: true,
+       secure: true,
+       sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+       path: "/",
+       maxAge: 7 * 24 * 60 * 60 * 1000,
+     });
 
     if (isProduction) {
       res.redirect("https://super-pile-frontend.vercel.app");

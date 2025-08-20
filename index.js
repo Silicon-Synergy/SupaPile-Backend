@@ -31,6 +31,7 @@ const allowedOrigins = [
   "http://192.168.0.3:2000",
   "http://localhost:2025",
   "https://super-pile-frontend.vercel.app",
+  "https://www.supapile.com",
   "chrome-extension://eiplichdddgjajjklpchhilebianmdei",
 ];
 
