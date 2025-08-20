@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 const jwtVerification = (req, res, next) => {
   console.log("Cookies received:", req.cookies);
   const { accessToken } = req.cookies;
-  console.log("hey this is accessToken", accessToken)
+  console.log("hey this is accessToken", req)
   if (!accessToken) {
     console.log("No access token found in cookies");
     return res.status(401).json({
