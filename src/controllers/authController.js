@@ -65,7 +65,7 @@ export const googleSignInCallback = (req, res) => {
     });
 
     if (isProduction) {
-      res.redirect("https://super-pile-frontend.vercel.app");
+      res.redirect("https://www.supapile.com");
     } else {
       res.redirect("http://localhost:2000");
     }
