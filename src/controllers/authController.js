@@ -18,27 +18,54 @@ export const googleSignInCallback = (req, res) => {
     const accessToken = generateAccessToken(req.user._id);
     const refreshToken = generateRefreshAcessToken(req.user._id);
 
+    console.log("accessToken", accessToken, refreshToken);
+    console.log("olamide");
+
     const isProduction = process.env.NODE_ENV === "production";
 
     console.log(isProduction);
-    // cole.log("hey there");
+    console.log("hey there");
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: isProduction ? "None" : "Lax", // nged for cross-don
-      path: "/", });
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      path: "/",
+      maxAge: 15 * 60 * 1000,
+    });
+    // res.setHeader(
+    //   "Set-Cookie",
+    //   cookie.serialize("accessToken", accessToken, {
+    //     httpOnly: true,
+    //     secure: true,
+    //     sameSite: "none", // allow cross-site cookies
+    //     path: "/",
+    //     maxAge: 7 * 24 * 60 * 60, // seconds
+    //     domain: "super-pile-frontend.vercel.app", // 👈 match your frontend domain
+    //   })
+    // );
 
-     res.cookie("refreshToken", refreshToken, {
-       httpOnly: true,
-       secure: true,
-       sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
-       path: "/",
-       maxAge: 7 * 24 * 60 * 60 * 1000,
-     });
+    // res.setHeader(
+    //   "Set-Cookie",
+    //   cookie.serialize("refreshToken", refreshToken, {
+    //     httpOnly: true,
+    //     secure: true,
+    //     sameSite: "none",
+    //     path: "/",
+    //     maxAge: 7 * 24 * 60 * 60,
+    //     domain: "super-pile-frontend.vercel.app", // 👈
+    //   })
+    // );
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     if (isProduction) {
-      res.redirect("https://www.supapile.com");
+      res.redirect("https://super-pile-frontend.vercel.app");
     } else {
       res.redirect("http://localhost:2000");
     }
