@@ -1,12 +1,12 @@
 import jwt from "jsonwebtoken";
 
-export const generatePulse = (_id) => {
+export const generateSpPulse = (_id) => {
   return jwt.sign({ id: _id }, process.env.JWT_SECRET, {
     expiresIn: "15m",
   });
 };
 
-export const generateDelta = (_id) => {
+export const generateSpDelta = (_id) => {
   return jwt.sign({ id: _id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });

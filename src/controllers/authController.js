@@ -1,7 +1,7 @@
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { generatePulse } from "../utilities/generateTokens.js";
-import { generateDelta } from "../utilities/generateTokens.js";
+import { generateSpPulse } from "../utilities/generateTokens.js";
+import { generateSpDelta } from "../utilities/generateTokens.js";
 import User from "../models/userModel.js";
 import cookie from "cookie";
 import { userCache } from "../cache/cache-with-nodeCache.js";
@@ -16,10 +16,10 @@ export const googleSignInCallback = (req, res) => {
       return res.status(401).json({ error: "Authentication failure" });
     }
 
-    const pulse = generatePulse(req.user._id);
-    const delta = generateDelta(req.user._id);
+    const spPulse = generateSpPulse(req.user._id);
+    const spDelta = generateSpDelta(req.user._id);
 
-    console.log("pulse", pulse, delta);
+    console.log("sp-pulse", spPulse, spDelta);
     console.log("olamide");
 
     const isProduction = process.env.NODE_ENV === "production";
@@ -27,7 +27,7 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    res.cookie("pulse", pulse, {
+    res.cookie("sp-pulse", spPulse, {
       httpOnly: true,
       secure: true,
       sameSite: isProduction ? "None" : "Lax",
@@ -35,7 +35,7 @@ export const googleSignInCallback = (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
 
-    res.cookie("delta", delta, {
+    res.cookie("sp-delta", spDelta, {
       httpOnly: true,
       secure: true,
       sameSite: isProduction ? "None" : "Lax",
@@ -54,13 +54,13 @@ export const googleSignInCallback = (req, res) => {
 };
 
 export const userData = async (req, res) => {
-  const { pulse } = req.cookies;
-  if (!pulse) {
+  const { "sp-pulse": spPulse } = req.cookies;
+  if (!spPulse) {
     return res
       .status(401)
       .json({ success: false, message: "user UnAuthorized" });
   }
-  const decoded = jwt.verify(pulse, process.env.JWT_SECRET);
+  const decoded = jwt.verify(spPulse, process.env.JWT_SECRET);
   console.log(decoded);
   console.log(decoded.id);
   const cacheKey = `user:${decoded.id}`;
@@ -97,14 +97,13 @@ export const userData = async (req, res) => {
 
 export const logOut = async (req, res) => {
   try {
-    res.clearCookie("pulse", {
+    res.clearCookie("sp-pulse", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       path: "/",
     });
-
-    res.clearCookie("delta", {
+    res.clearCookie("sp-delta", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",

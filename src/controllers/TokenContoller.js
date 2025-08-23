@@ -1,21 +1,21 @@
 import jwt from "jsonwebtoken";
-import { generatePulse } from "../utilities/generateTokens.js";
+import { generateSpPulse } from "../utilities/generateTokens.js";
 
 export const refreshToken = async (req, res) => {
-  const { delta } = req.cookies;
+  const { "sp-delta": spDelta } = req.cookies;
   console.log(req.cookies)
-  if (!delta) {
+  if (!spDelta) {
     return res.status(404).json({ message: "no token provided" });
   }
   try {
-    const decoded = jwt.verify(delta, process.env.JWT_SECRET);
+    const decoded = jwt.verify(spDelta, process.env.JWT_SECRET);
     console.log(decoded);
     if (!decoded) {
       return res.status(200).json({ message: "unAuthorized" });
     }
-    const newPulse = generatePulse(decoded.id);
-    console.log(newPulse);
-    res.cookie("pulse", newPulse, {
+    const newSpPulse = generateSpPulse(decoded.id);
+    console.log(newSpPulse);
+    res.cookie("sp-pulse", newSpPulse, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",

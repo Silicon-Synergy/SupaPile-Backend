@@ -2,17 +2,17 @@ import jwt from "jsonwebtoken";
 
 const jwtVerification = (req, res, next) => {
   console.log("Cookies received:", req.cookies);
-  const { pulse } = req.cookies;
+  const { "sp-pulse": spPulse } = req.cookies;
 
-  if (!pulse) {
-    console.log("No pulse found in cookies");
+  if (!spPulse) {
+    console.log("No sp-pulse found in cookies");
     return res.status(401).json({
       success: false,
       message: "unauthorized",
     });
   }
 
-  jwt.verify(pulse, process.env.JWT_SECRET, (err, decoded) => {
+  jwt.verify(spPulse, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       console.log("Token verification failed:", err.message);
       if (err.name === 'TokenExpiredError') {
