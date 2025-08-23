@@ -296,8 +296,8 @@ export const softDeletePile = async (req, res) => {
 
     // ✅ Add ObjectId validation
     if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res;
       console.log("something went wrong");
+      return res;
     }
 
     let linkId = _id;
@@ -325,6 +325,8 @@ export const softDeletePile = async (req, res) => {
     if (!updateResult) {
       return res.status(403).json({ message: "failed to archive" });
     }
+
+    categoriesCache.del(`categories:${id}`);
     return res
       .status(200)
       .json({ message: `${updateResult.modifiedCount} links archived` });
@@ -551,6 +553,7 @@ export const restorePile = async (req, res) => {
     if (!result || result.modifiedCount <= 0) {
       return res.status(500).json({ message: "not restored" });
     }
+    categoriesCache.del(`categories:${id}`);
     return res.status(200).json({ success: true, message: "pile restored" });
   } catch (error) {
     console.log(error);

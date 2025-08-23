@@ -65,7 +65,7 @@ export const googleSignInCallback = (req, res) => {
     });
 
     if (isProduction) {
-      res.redirect("https://www.supapile.com");
+   res.redirect("http://localhost:2000");
     } else {
       res.redirect("http://localhost:2000");
     }

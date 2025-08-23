@@ -52,7 +52,7 @@ app.use(
     credentials: true,
     optionsSuccessStatus: 200,
     // Add explicit cookie handling
-    exposedHeaders: ['set-cookie'],
+    exposedHeaders: ["set-cookie"],
   })
 );
 
@@ -60,11 +60,13 @@ app.use(
 app.use(cookieParser());
 
 // Configure Helmet to not interfere with cookies
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  // Don't block cookie headers
-  contentSecurityPolicy: false,
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    // Don't block cookie headers
+    contentSecurityPolicy: false,
+  })
+);
 
 export const io = new Server(server, {
   cors: {
@@ -93,6 +95,7 @@ const startServer = async () => {
   try {
     await dbConnect();
     server.listen(PORT, () => {
+      console.log("Server running on http://0.0.0.0:5233");
       console.log(`✅ Server running on port ${PORT}`);
     });
   } catch (error) {
