@@ -1,10 +1,11 @@
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { generateAccessToken } from "../utilities/generateTokens.js";
-import { generateRefreshAcessToken } from "../utilities/generateTokens.js";
+import { generatePulse } from "../utilities/generateTokens.js";
+import { generateDelta } from "../utilities/generateTokens.js";
 import User from "../models/userModel.js";
 import cookie from "cookie";
 import { userCache } from "../cache/cache-with-nodeCache.js";
+
 export const googleSignIn = passport.authenticate("google", {
   scope: ["profile", "email"],
 });
@@ -15,10 +16,10 @@ export const googleSignInCallback = (req, res) => {
       return res.status(401).json({ error: "Authentication failure" });
     }
 
-    const accessToken = generateAccessToken(req.user._id);
-    const refreshToken = generateRefreshAcessToken(req.user._id);
+    const pulse = generatePulse(req.user._id);
+    const delta = generateDelta(req.user._id);
 
-    console.log("accessToken", accessToken, refreshToken);
+    console.log("pulse", pulse, delta);
     console.log("olamide");
 
     const isProduction = process.env.NODE_ENV === "production";
@@ -26,46 +27,24 @@ export const googleSignInCallback = (req, res) => {
     console.log(isProduction);
     console.log("hey there");
 
-    res.cookie("accessToken", accessToken, {
+    res.cookie("pulse", pulse, {
       httpOnly: true,
       secure: true,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      sameSite: isProduction ? "None" : "Lax",
       path: "/",
       maxAge: 15 * 60 * 1000,
     });
-    // res.setHeader(
-    //   "Set-Cookie",
-    //   cookie.serialize("accessToken", accessToken, {
-    //     httpOnly: true,
-    //     secure: true,
-    //     sameSite: "none", // allow cross-site cookies
-    //     path: "/",
-    //     maxAge: 7 * 24 * 60 * 60, // seconds
-    //     domain: "super-pile-frontend.vercel.app", // 👈 match your frontend domain
-    //   })
-    // );
 
-    // res.setHeader(
-    //   "Set-Cookie",
-    //   cookie.serialize("refreshToken", refreshToken, {
-    //     httpOnly: true,
-    //     secure: true,
-    //     sameSite: "none",
-    //     path: "/",
-    //     maxAge: 7 * 24 * 60 * 60,
-    //     domain: "super-pile-frontend.vercel.app", // 👈
-    //   })
-    // );
-    res.cookie("refreshToken", refreshToken, {
+    res.cookie("delta", delta, {
       httpOnly: true,
       secure: true,
-      sameSite: isProduction ? "None" : "Lax", // Changed for cross-domain
+      sameSite: isProduction ? "None" : "Lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     if (isProduction) {
-   res.redirect("http://localhost:2000");
+      res.redirect("http://www.supapile.com");
     } else {
       res.redirect("http://localhost:2000");
     }
@@ -75,13 +54,13 @@ export const googleSignInCallback = (req, res) => {
 };
 
 export const userData = async (req, res) => {
-  const { accessToken } = req.cookies;
-  if (!accessToken) {
+  const { pulse } = req.cookies;
+  if (!pulse) {
     return res
       .status(401)
       .json({ success: false, message: "user UnAuthorized" });
   }
-  const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
+  const decoded = jwt.verify(pulse, process.env.JWT_SECRET);
   console.log(decoded);
   console.log(decoded.id);
   const cacheKey = `user:${decoded.id}`;
@@ -118,28 +97,25 @@ export const userData = async (req, res) => {
 
 export const logOut = async (req, res) => {
   try {
-    // Clear cookies
-    res.clearCookie("accessToken", {
+    res.clearCookie("pulse", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       path: "/",
     });
 
-    res.clearCookie("refreshToken", {
+    res.clearCookie("delta", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Updated
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       path: "/",
     });
 
-    // Clear user cache
     if (req.user && req.user.id) {
       const cacheKey = `user:${req.user.id}`;
       userCache.del(cacheKey);
     }
 
-    // Return JSON response (let frontend handle redirect)
     return res.status(200).json({
       success: true,
       message: "Logged out successfully",

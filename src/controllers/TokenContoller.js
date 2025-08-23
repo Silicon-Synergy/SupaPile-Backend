@@ -1,27 +1,26 @@
 import jwt from "jsonwebtoken";
-import { generateAccessToken } from "../utilities/generateTokens.js";
+import { generatePulse } from "../utilities/generateTokens.js";
 
 export const refreshToken = async (req, res) => {
-  const { refreshToken } = req.cookies;
+  const { delta } = req.cookies;
   console.log(req.cookies)
-  if (!refreshToken) {
+  if (!delta) {
     return res.status(404).json({ message: "no token provided" });
   }
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const decoded = jwt.verify(delta, process.env.JWT_SECRET);
     console.log(decoded);
     if (!decoded) {
       return res.status(200).json({ message: "unAuthorized" });
     }
-    const accesToken = generateAccessToken(decoded.id);
-    console.log(accesToken);
-    res.cookie("accessToken", accesToken, {
+    const newPulse = generatePulse(decoded.id);
+    console.log(newPulse);
+    res.cookie("pulse", newPulse, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Fixed typo: "prduction" -> "production"
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", // Changed to match other cookie settings
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     });
     
-    // Add missing response
     return res.status(200).json({ 
       success: true, 
       message: "Token refreshed successfully" 
