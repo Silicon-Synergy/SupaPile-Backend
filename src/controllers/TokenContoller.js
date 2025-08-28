@@ -5,7 +5,7 @@ export const refreshToken = async (req, res) => {
   const { "sp-delta": spDelta } = req.cookies;
   console.log(req.cookies)
   if (!spDelta) {
-    return res.status(404).json({ message: "no token provided" });
+    return res.status(404).json({ message: "unAuthorized"});
   }
   try {
     const decoded = jwt.verify(spDelta, process.env.JWT_SECRET);
@@ -23,11 +23,11 @@ export const refreshToken = async (req, res) => {
     
     return res.status(200).json({ 
       success: true, 
-      message: "Token refreshed successfully" 
+      message: "authorized" 
     });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(403).json({ message: "Token Expired" });
+      return res.status(403).json({ message: "unauthorized" });
     }
     console.log(error);
     return res.status(500).json({ message: "Internal server error" });

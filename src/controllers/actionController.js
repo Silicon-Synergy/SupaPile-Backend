@@ -19,22 +19,46 @@ export const postPile = async (req, res) => {
       piles = [piles];
     }
     let URLsToCheck = piles.map((pile) => pile.url);
-    const existingPile = await Links.find({
+    
+    // Check for existing active piles
+    const existingActivePile = await Links.find({
+      userId: id,
+      url: { $in: URLsToCheck },
+      $or: [{ isArchived: false }, { isArchived: { $exists: false } }]
+    });
+    
+    // Check for existing archived piles
+    const existingArchivedPile = await Links.find({
       userId: id,
       url: { $in: URLsToCheck },
       isArchived: true,
     });
 
-    const existingURLs = existingPile.map((pile) => pile.url);
-    const nonExistingURLs = await URLsToCheck.filter(
-      (url) => !existingURLs.includes(url)
-    );
-    console.log("This exists" + existingURLs);
-    const pilesToSend = piles.filter((pile) =>
-      nonExistingURLs.includes(pile.url)
-    );
-
-    const formatedNonExistingURLs = pilesToSend.map((pileToSend) => ({
+    const existingActiveURLs = existingActivePile.map((pile) => pile.url);
+    const existingArchivedURLs = existingArchivedPile.map((pile) => pile.url);
+    
+    // If there are active piles, return specific error
+    if (existingActiveURLs.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "This link already exists in your active piles.",
+        existingUrls: existingActiveURLs,
+        type: "active_duplicate"
+      });
+    }
+    
+    // If there are archived piles, return specific error
+    if (existingArchivedURLs.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "This link exists in your archived piles. Please restore it or use a different URL.",
+        existingUrls: existingArchivedURLs,
+        type: "archived_duplicate"
+      });
+    }
+    
+    // All URLs are new, proceed with creation
+    const formatedNonExistingURLs = piles.map((pileToSend) => ({
       userId: id,
       ...pileToSend,
     }));
@@ -48,13 +72,6 @@ export const postPile = async (req, res) => {
       key.startsWith(`piles:${id}:`)
     );
     userPileKeys.forEach((key) => pilesCache.del(key));
-
-    if (formatedNonExistingURLs.length === 0) {
-      return res.status(409).json({
-        success: false,
-        message: "This link already exists in your pile.",
-      });
-    }
 
     console.log(formatedNonExistingURLs);
 
@@ -84,10 +101,15 @@ export const postPile = async (req, res) => {
     return res.status(200).json({
       success: true,
       saved: formatedNonExistingURLs.map((p) => p.url),
-      existing: existingURLs,
+      message: "Links saved successfully!"
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while saving links.",
+      error: error.message
+    });
   }
 };
 

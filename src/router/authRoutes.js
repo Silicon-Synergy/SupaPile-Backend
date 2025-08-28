@@ -31,7 +31,7 @@ authRouter.get(
 );
 
 authRouter.get("/user", jwtVerification, limiter, userData);
-authRouter.get("/refresh-token", limiter, refreshToken);
-authRouter.get("/logout", limiter, logOut);
+authRouter.get("/sp-delta-vitals", limiter, refreshToken);
+authRouter.post("/logout", limiter, logOut);
 
 export default authRouter;
