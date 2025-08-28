@@ -13,7 +13,9 @@ import {
   listOfCategories,
   getClickedPile,
   changeVisibility,
-  magicSave, // Add this import
+  magicSave,
+  createCategory,
+  deleteCategory, // Add this import
 } from "../controllers/actionController.js";
 import { limiter } from "../middlewares/rateLimiter.js";
 import { getCacheStats } from "../cache/cache-with-nodeCache.js";
@@ -28,6 +30,8 @@ actionRouter.get("/piles", jwtVerification, readPile);                     // Ge
 // Specific collection endpoints (before parameterized routes)
 actionRouter.get("/piles/archived", jwtVerification, archivedPile);        // Get archived piles
 actionRouter.get("/piles/categories", jwtVerification, listOfCategories);  // Get all categories
+actionRouter.post("/piles/categories", jwtVerification, createCategory);   // Create new category
+actionRouter.delete("/piles/categories/:categoryName", jwtVerification, deleteCategory); // Delete category
 
 // Individual resource routes (operate on single resources)
 actionRouter.get("/piles/:id", jwtVerification, getClickedPile);           // Get specific pile

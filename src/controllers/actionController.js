@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Links from "../models/actionModel.js";
+import Category from "../models/categoryModel.js"; // Add this import
 import { randomUUID } from "crypto";
 import { generateMeta } from "../utilities/generateMeta.js";
 import { generatePublicToken } from "../utilities/generateTokens.js";
@@ -65,6 +66,37 @@ export const postPile = async (req, res) => {
       });
     }
 
+    // Extract unique categories from piles and create them if they don't exist
+    const categories = [...new Set(piles.map(pile => pile.category).filter(cat => cat && cat !== 'all'))];
+    
+    if (categories.length > 0) {
+      // Check which categories already exist
+      const existingCategories = await Category.find({
+        userId: id,
+        name: { $in: categories }
+      }).select('name').lean();
+      
+      const existingCategoryNames = existingCategories.map(cat => cat.name);
+      const newCategories = categories.filter(cat => !existingCategoryNames.includes(cat));
+      
+      // Create new categories
+      if (newCategories.length > 0) {
+        const categoriesToCreate = newCategories.map(categoryName => ({
+          userId: id,
+          name: categoryName.trim()
+        }));
+        
+        try {
+          await Category.insertMany(categoriesToCreate);
+        } catch (error) {
+          // Handle duplicate key errors gracefully (in case of race conditions)
+          if (error.code !== 11000) {
+            throw error;
+          }
+        }
+      }
+    }
+
     // All URLs are new, proceed with creation
     const formatedNonExistingURLs = piles.map((pileToSend) => ({
       userId: id,
@@ -125,6 +157,7 @@ export const magicSave = async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url);
     const { id } = req.user;
+    const { category = "Uncategorized" } = req.body; // Allow category to be passed
 
     // Validate URL is HTTPS only
     if (!url.startsWith("https://")) {
@@ -151,11 +184,33 @@ export const magicSave = async (req, res) => {
       });
     }
 
+    // Create category if it doesn't exist and it's not 'all' or 'Uncategorized'
+    if (category && category !== 'all' && category !== 'Uncategorized') {
+      const existingCategory = await Category.findOne({
+        userId: id,
+        name: category
+      });
+      
+      if (!existingCategory) {
+        try {
+          await Category.create({
+            userId: id,
+            name: category.trim()
+          });
+        } catch (error) {
+          // Handle duplicate key errors gracefully
+          if (error.code !== 11000) {
+            throw error;
+          }
+        }
+      }
+    }
+
     // Create new pile object
     const newPile = {
       userId: id,
       url: url,
-      category: "Uncategorized", // default category
+      category: category, // Use the provided category
     };
 
     // Clear cache
@@ -290,12 +345,28 @@ export const listOfCategories = async (req, res) => {
   }
 
   try {
-    let categories = await Links.distinct("category", {
-      userId: id,
-      isArchived: false,
+    // Get categories from both the Category model and existing piles
+    const [createdCategories, pileCategories] = await Promise.all([
+      Category.find({ userId: id }).select('name').lean(),
+      Links.distinct("category", {
+        userId: id,
+        isArchived: false,
+      })
+    ]);
+
+    // Combine and deduplicate categories
+    const categoryNames = new Set(['all']);
+    
+    // Add created categories
+    createdCategories.forEach(cat => categoryNames.add(cat.name));
+    
+    // Add categories from existing piles
+    pileCategories.forEach(cat => {
+      if (cat && cat !== 'all') categoryNames.add(cat);
     });
 
-    categories = ["all", ...categories.filter((cat) => cat !== "all")];
+    const categories = Array.from(categoryNames);
+    
     categoriesCache.set(cacheKey, categories);
     console.log(categories);
     return res.status(200).json({ success: true, data: { categories } });
@@ -306,6 +377,7 @@ export const listOfCategories = async (req, res) => {
       .json({ success: false, message: "Failed to fetch categories" });
   }
 };
+
 export const softDeletePile = async (req, res) => {
   try {
     const { id } = req.user;
@@ -613,6 +685,7 @@ export const hardDeletePile = async (req, res) => {
     if (!Array.isArray(linkId)) {
       linkId = [linkId];
     }
+
     const objectId = linkId.map((link) => {
       return new mongoose.Types.ObjectId(link);
     });
@@ -754,54 +827,177 @@ export const changeVisibility = async (req, res) => {
 
 export const getCurrentPublicLink = async (req, res) => {
   const { id } = req.user;
-  const now = Date.now();
-
-  // Add caching
-  const cacheKey = `current-public:${id}`;
-  const cachedResult = publicLinkCache.get(cacheKey);
-  console.log("babies are trying to kill themselves all the time");
-  console.log(cachedResult);
-  if (cachedResult) {
-    return res.status(200).json({ success: true, ...cachedResult });
-  }
-
   try {
-    const existing = await Links.findOne({
+    const result = await Links.findOne({
       userId: id,
-      publicLinkToken: { $ne: "" },
+      publicLinkToken: { $exists: true, $ne: "" },
+      expiresAt: { $gt: new Date() },
       visibility: true,
       isArchived: false,
-      expiresAt: { $gt: new Date(now) },
-    });
+    }).select(["publicLinkToken", "expiresAt", "-_id"]);
 
-    if (!existing || !existing.publicLinkToken) {
+    if (!result) {
       return res.status(404).json({
         success: false,
         message: "No active public link found",
       });
     }
 
-    const timeLeft = new Date(existing.expiresAt) - now;
-    const minutesLeft = Math.floor(timeLeft / (1000 * 60));
-    const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
-
-    const responseData = {
-      data: `${environmentURL}/api/share/${existing.publicLinkToken}`,
-      expiresAt: existing.expiresAt,
-      timeLeft: {
-        minutes: minutesLeft,
-        seconds: secondsLeft,
-        total: timeLeft,
-      },
-      message: `Link expires in ${minutesLeft}m ${secondsLeft}s`,
-    };
-
-    // Cache with shorter TTL since it has time-sensitive data
-    publicLinkCache.set(cacheKey, responseData, 30);
-
-    return res.status(200).json({ success: true, ...responseData });
+    return res.status(200).json({
+      success: true,
+      data: `${environmentURL}/api/share/${result.publicLinkToken}`,
+      expiresAt: result.expiresAt,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const createCategory = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { categoryName } = req.body;
+
+    // Validate category name
+    if (!categoryName || typeof categoryName !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: "Category name is required and must be a string"
+      });
+    }
+
+    // Trim and validate category name
+    const trimmedCategoryName = categoryName.trim();
+    
+    if (trimmedCategoryName.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Category name cannot be empty"
+      });
+    }
+
+    if (trimmedCategoryName.length > 17) {
+      return res.status(400).json({
+        success: false,
+        message: "Category name cannot exceed 17 characters"
+      });
+    }
+
+    // Check if category already exists for this user
+    const existingCategory = await Category.findOne({
+      userId: id,
+      name: trimmedCategoryName
+    });
+
+    if (existingCategory) {
+      return res.status(409).json({
+        success: false,
+        message: "Category already exists"
+      });
+    }
+
+    // Create the category
+    const newCategory = new Category({
+      userId: id,
+      name: trimmedCategoryName
+    });
+
+    await newCategory.save();
+
+    // Clear categories cache
+    categoriesCache.del(`categories:${id}`);
+
+    return res.status(201).json({
+      success: true,
+      message: "Category created successfully",
+      data: { categoryName: trimmedCategoryName }
+    });
+
+  } catch (error) {
+    console.log(error);
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Category already exists"
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while creating the category"
+    });
+  }
+};
+
+export const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { categoryName } = req.params;
+
+    // Validate category name
+    if (!categoryName || typeof categoryName !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: "Category name is required"
+      });
+    }
+
+    // Prevent deletion of 'all' category
+    if (categoryName.toLowerCase() === 'all') {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete the 'all' category"
+      });
+    }
+
+    // Check if category exists
+    const existingCategory = await Category.findOne({
+      userId: id,
+      name: categoryName
+    });
+
+    if (!existingCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
+      });
+    }
+
+    // Update all piles with this category to 'all'
+    await Links.updateMany(
+      { 
+        userId: id, 
+        category: categoryName 
+      },
+      { 
+        $set: { category: 'all' } 
+      }
+    );
+
+    // Delete the category from Category model
+    await Category.deleteOne({
+      userId: id,
+      name: categoryName
+    });
+
+    // Clear both categories and piles cache
+    categoriesCache.del(`categories:${id}`);
+    const cacheKeys = pilesCache.keys();
+    const userPileKeys = cacheKeys.filter((key) =>
+      key.startsWith(`piles:${id}:`)
+    );
+    userPileKeys.forEach((key) => pilesCache.del(key));
+
+    return res.status(200).json({
+      success: true,
+      message: "Category deleted successfully and piles moved to 'all' category"
+    });
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while deleting the category"
+    });
   }
 };
