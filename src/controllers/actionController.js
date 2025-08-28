@@ -13,6 +13,11 @@ import { nanoid } from "nanoid";
 import dotenv from "dotenv";
 dotenv.config();
 
+const environmentURL =
+  process.env.NODE_ENV === "production"
+    ? "https://api.supapile.com"
+    : "http://localhost:2000";
+
 export const postPile = async (req, res) => {
   try {
     let piles = req.body;
@@ -453,11 +458,6 @@ export const generatePublicLink = async (req, res) => {
       }
     );
 
-    const environmentURL =
-      process.env.NODE_ENV === "production"
-        ? "https://api.supapile.com"
-        : "http://localhost:2000";
-
     return res.status(200).json({
       success: true,
       data: `${environmentURL}/api/share/${publicLinkToken}`,
@@ -786,7 +786,7 @@ export const getCurrentPublicLink = async (req, res) => {
     const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
 
     const responseData = {
-      data: `http://localhost:2000/api/share/${existing.publicLinkToken}`,
+      data: `${environmentURL}/${existing.publicLinkToken}`,
       expiresAt: existing.expiresAt,
       timeLeft: {
         minutes: minutesLeft,
