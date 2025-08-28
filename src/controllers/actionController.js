@@ -15,7 +15,7 @@ dotenv.config();
 
 const environmentURL =
   process.env.NODE_ENV === "production"
-    ? "https://api.supapile.com"
+    ? "https://supapile.com"
     : "http://localhost:2000";
 
 export const postPile = async (req, res) => {
