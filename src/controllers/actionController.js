@@ -786,7 +786,7 @@ export const getCurrentPublicLink = async (req, res) => {
     const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
 
     const responseData = {
-      data: `${environmentURL}/${existing.publicLinkToken}`,
+      data: `${environmentURL}/api/share/${existing.publicLinkToken}`,
       expiresAt: existing.expiresAt,
       timeLeft: {
         minutes: minutesLeft,
