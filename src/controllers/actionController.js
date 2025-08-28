@@ -455,8 +455,8 @@ export const generatePublicLink = async (req, res) => {
 
     const environmentURL =
       process.env.NODE_ENV === "production"
-        ? process.env.GOOGLE_CALLBACK_URL_PROD
-        : process.env.GOOGLE_CALLBACK_URL_DEV;
+        ? "htttps://api.supapile.com"
+        : "http://localhost:2000";
 
     return res.status(200).json({
       success: true,
