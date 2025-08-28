@@ -10,6 +10,8 @@ import {
 } from "../cache/cache-with-nodeCache.js";
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const postPile = async (req, res) => {
   try {
@@ -19,14 +21,14 @@ export const postPile = async (req, res) => {
       piles = [piles];
     }
     let URLsToCheck = piles.map((pile) => pile.url);
-    
+
     // Check for existing active piles
     const existingActivePile = await Links.find({
       userId: id,
       url: { $in: URLsToCheck },
-      $or: [{ isArchived: false }, { isArchived: { $exists: false } }]
+      $or: [{ isArchived: false }, { isArchived: { $exists: false } }],
     });
-    
+
     // Check for existing archived piles
     const existingArchivedPile = await Links.find({
       userId: id,
@@ -36,27 +38,28 @@ export const postPile = async (req, res) => {
 
     const existingActiveURLs = existingActivePile.map((pile) => pile.url);
     const existingArchivedURLs = existingArchivedPile.map((pile) => pile.url);
-    
+
     // If there are active piles, return specific error
     if (existingActiveURLs.length > 0) {
       return res.status(409).json({
         success: false,
         message: "This link already exists in your active piles.",
         existingUrls: existingActiveURLs,
-        type: "active_duplicate"
+        type: "active_duplicate",
       });
     }
-    
+
     // If there are archived piles, return specific error
     if (existingArchivedURLs.length > 0) {
       return res.status(409).json({
         success: false,
-        message: "This link exists in your archived piles. Please restore it or use a different URL.",
+        message:
+          "This link exists in your archived piles. Please restore it or use a different URL.",
         existingUrls: existingArchivedURLs,
-        type: "archived_duplicate"
+        type: "archived_duplicate",
       });
     }
-    
+
     // All URLs are new, proceed with creation
     const formatedNonExistingURLs = piles.map((pileToSend) => ({
       userId: id,
@@ -101,14 +104,14 @@ export const postPile = async (req, res) => {
     return res.status(200).json({
       success: true,
       saved: formatedNonExistingURLs.map((p) => p.url),
-      message: "Links saved successfully!"
+      message: "Links saved successfully!",
     });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
       success: false,
       message: "Internal server error while saving links.",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -450,9 +453,14 @@ export const generatePublicLink = async (req, res) => {
       }
     );
 
+    const environmentURL =
+      process.env.NODE_ENV === "production"
+        ? process.env.GOOGLE_CALLBACK_URL_PROD
+        : process.env.GOOGLE_CALLBACK_URL_DEV;
+
     return res.status(200).json({
       success: true,
-      data: `http://localhost:2000/api/share/${publicLinkToken}`,
+      data: `${environmentURL}/api/share/${publicLinkToken}`,
       expiresAt: expiresAt,
       expiryOption: expiryOption,
       visiblePilesCount: visiblePiles.length,
