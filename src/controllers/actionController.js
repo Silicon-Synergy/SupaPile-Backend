@@ -455,7 +455,7 @@ export const generatePublicLink = async (req, res) => {
 
     const environmentURL =
       process.env.NODE_ENV === "production"
-        ? "htttps://api.supapile.com"
+        ? "https://api.supapile.com"
         : "http://localhost:2000";
 
     return res.status(200).json({
