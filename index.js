@@ -41,7 +41,7 @@ if (process.env.FRONTEND_URL) {
 }
 
 if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
+  app.set("trust proxy", 1); // or true
 }
 app.use(
   cors({
