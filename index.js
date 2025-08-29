@@ -40,7 +40,7 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
-if (process.env.NODE_ENV === "Production") {
+if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 app.use(
