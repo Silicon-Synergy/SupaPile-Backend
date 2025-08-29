@@ -37,6 +37,7 @@ export const generateMeta = async (theObject) => {
     const metaData = { title, description, image };
     const result = { ...metaData, id: theObject.id };
     metaCache.set(cacheKey, result);
+    console.log("hey brother haaa")
     return result;
   } catch (error) {
     console.log('hey i want to check something')

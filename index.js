@@ -40,6 +40,9 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+if (process.env.NODE_ENV === "Production") {
+  app.set("trust proxy", 1);
+}
 app.use(
   cors({
     origin: (origin, callback) => {
