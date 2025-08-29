@@ -39,6 +39,8 @@ export const generateMeta = async (theObject) => {
     metaCache.set(cacheKey, result);
     return result;
   } catch (error) {
+    console.log('hey i want to check something')
+    console.log(error)
     const fallback = {
       title: domain1,
       description: `from ${domain2}`,
