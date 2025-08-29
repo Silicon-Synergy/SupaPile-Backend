@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { metaScrapper } from "../services/metaScrapper.js";
+import rateLimit from "express-rate-limit";
 const metaScrapperRouter = Router();
 
 const youtubeLimiter = rateLimit({
