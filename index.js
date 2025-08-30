@@ -41,10 +41,12 @@ if (process.env.FRONTEND_URL) {
 app.set("trust proxy", 1);
 
 // ✅ Example: Apply rate limit to a specific route
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
-  message: "Too many login attempts, please try again later.",
+app.get("/debug/ip", (req, res) => {
+  res.json({
+    ip: req.ip,
+    ips: req.ips,
+    xff: req.headers["x-forwarded-for"] || null,
+  });
 });
 
 app.use(
