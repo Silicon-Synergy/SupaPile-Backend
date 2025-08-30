@@ -16,7 +16,6 @@ export const generateMeta = async (theObject) => {
   const domain2 = new URL(decodedUrl).hostname;
   try {
     const hostname = new URL(decodedUrl).hostname;
-
     if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
       // 🎯 YouTube: use oEmbed
       const oEmbedUrl = `https://www.youtube.com/oembed?url=${decodedUrl}&format=json`;

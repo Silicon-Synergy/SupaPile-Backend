@@ -40,15 +40,6 @@ if (process.env.FRONTEND_URL) {
 }
 app.set("trust proxy", 1);
 
-// ✅ Example: Apply rate limit to a specific route
-app.get("/debug/ip", (req, res) => {
-  res.json({
-    ip: req.ip,
-    ips: req.ips,
-    xff: req.headers["x-forwarded-for"] || null,
-  });
-});
-
 app.use(
   cors({
     origin: (origin, callback) => {
