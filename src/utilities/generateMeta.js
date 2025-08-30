@@ -17,6 +17,7 @@ export const generateMeta = async (theObject) => {
 
   try {
     const response = await axios.get(decodedUrl, {
+      timeout: 10000,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -37,11 +38,11 @@ export const generateMeta = async (theObject) => {
     const metaData = { title, description, image };
     const result = { ...metaData, id: theObject.id };
     metaCache.set(cacheKey, result);
-    console.log("hey brother haaa")
+    console.log("hey brother haaa");
     return result;
   } catch (error) {
-    console.log('hey i want to check something')
-    console.log(error)
+    console.log("hey i want to check something");
+    console.log(error);
     const fallback = {
       title: domain1,
       description: `from ${domain2}`,
