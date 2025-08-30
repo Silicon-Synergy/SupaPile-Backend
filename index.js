@@ -14,8 +14,6 @@ import shareRouter from "./src/router/shareRoute.js";
 import metaScrapperRouter from "./src/router/serviceRoute.js";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import rateLimit from "express-rate-limit";
-
 //variable initialization
 const PORT = process.env.PORT || 5000;
 const app = express();
