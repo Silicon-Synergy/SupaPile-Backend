@@ -980,7 +980,7 @@ export const deleteCategory = async (req, res) => {
       name: categoryName
     });
 
-    // Clear both categories and piles cache
+    // Clear both categories and piles cache cache
     categoriesCache.del(`categories:${id}`);
     const cacheKeys = pilesCache.keys();
     const userPileKeys = cacheKeys.filter((key) =>

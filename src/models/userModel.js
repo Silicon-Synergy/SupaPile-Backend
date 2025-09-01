@@ -20,6 +20,11 @@ const UserSchema = new mongoose.Schema(
     profilePicture: {
       type: String,
     },
+    newTimer: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
     subscriptionPlan: {
       type: String,
       enum: ["free", "premium"],

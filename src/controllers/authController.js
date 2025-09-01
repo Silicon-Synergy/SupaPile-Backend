@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import { generateSpPulse } from "../utilities/generateTokens.js";
 import { generateSpDelta } from "../utilities/generateTokens.js";
 import User from "../models/userModel.js";
-import cookie from "cookie";
 import { userCache } from "../cache/cache-with-nodeCache.js";
 
 export const googleSignIn = passport.authenticate("google", {
@@ -74,6 +73,7 @@ export const userData = async (req, res) => {
     const user = await User.findOne({ _id: decoded.id }).select([
       "profilePicture",
       "name",
+      "newTimer",
       "-_id",
     ]);
 
@@ -125,5 +125,41 @@ export const logOut = async (req, res) => {
       success: false,
       message: "Logout failed",
     });
+  }
+};
+export const verifyFirstTimer = async (req, res) => {
+  const { "sp-pulse": spPulse } = req.cookies;
+  if (!spPulse) {
+    return res
+      .status(401)
+      .json({ success: false, message: "User UnAuthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(spPulse, process.env.JWT_SECRET);
+
+    let user = await User.findById(decoded.id).select("newTimer");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (!user.newTimer) {
+      user.newTimer = true;
+      await user.save();
+    }
+
+    // clear cache if you’re caching server-side
+    userCache.del(`user:${decoded.id}`);
+
+    return res.status(200).json({
+      success: true,
+      newTimer: user.newTimer, // return just the updated field
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
