@@ -62,7 +62,6 @@ actionRouter.get("/cache/stats", (req, res) => {
   });
 });
 
-// Add this route before the parameterized routes
-actionRouter.get("/magic-save/*", jwtVerification, magicSave);
+// actionRouter.get("/magic-save/*", jwtVerification, magicSave);
 
 export default actionRouter;
