@@ -45,7 +45,8 @@ export const googleSignInCallback = (req, res) => {
     if (isProduction) {
       res.redirect("http://www.supapile.com");
     } else {
-      res.redirect("http://localhost:2000");
+      // res.redirect("http://localhost:2000");
+       res.redirect("http://www.supapile.com");
     }
   } catch (error) {
     console.log(error);
@@ -70,12 +71,9 @@ export const userData = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ _id: decoded.id }).select([
-      "profilePicture",
-      "name",
-      "newTimer",
-      "-_id",
-    ]);
+    const user = await User.findOne({ _id: decoded.id }).select(
+      "profilePicture name newTimer -_id"
+    );
 
     if (!user) {
       return res
