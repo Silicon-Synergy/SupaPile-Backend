@@ -43,10 +43,9 @@ export const googleSignInCallback = (req, res) => {
     });
 
     if (isProduction) {
-      res.redirect("https://www.supapile.com");
+      res.redirect("http://www.supapile.com");
     } else {
-      // res.redirect("http://localhost:2000");
-       res.redirect("https://www.supapile.com");
+      res.redirect("http://localhost:2000");
     }
   } catch (error) {
     console.log(error);
