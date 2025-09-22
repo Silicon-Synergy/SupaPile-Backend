@@ -33,6 +33,7 @@ const allowedOrigins = [
   "https://www.supapile.com",
   "https://supapile.com",
   "chrome-extension://eiplichdddgjajjklpchhilebianmdei",
+  "chrome-extension://dijfgnlpkjppccgkiapcppdkeiekemah"
 ];
 
 if (process.env.FRONTEND_URL) {
