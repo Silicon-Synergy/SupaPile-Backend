@@ -31,7 +31,7 @@ export const googleSignInCallback = (req, res) => {
       secure: true,
       sameSite: isProduction ? "None" : "Lax",
       path: "/",
-      maxAge: 15 * 60 * 1000,
+      maxAge: 60 * 60 * 1000, 
     });
 
     res.cookie("sp-delta", spDelta, {

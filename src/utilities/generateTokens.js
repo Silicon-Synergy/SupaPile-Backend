@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 export const generateSpPulse = (_id) => {
   return jwt.sign({ id: _id }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "1h",
   });
 };
 

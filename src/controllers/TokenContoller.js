@@ -15,10 +15,14 @@ export const refreshToken = async (req, res) => {
     }
     const newSpPulse = generateSpPulse(decoded.id);
     console.log(newSpPulse);
+    
+    // Fix: Add maxAge to prevent session-only cookie
     res.cookie("sp-pulse", newSpPulse, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      path: "/",
+      maxAge: 60 * 60 * 1000, // 1 hour instead of 15 minutes
     });
     
     return res.status(200).json({ 
